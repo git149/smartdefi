@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web3功能测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .test-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            backdrop-filter: blur(10px);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success { background: rgba(76, 175, 80, 0.3); }
+        .error { background: rgba(244, 67, 54, 0.3); }
+        .warning { background: rgba(255, 152, 0, 0.3); }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .result {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Web3功能测试页面</h1>
+    
+    <div class="test-card">
+        <h2>📍 当前访问方式检测</h2>
+        <div id="protocolInfo" class="result"></div>
+    </div>
+
+    <div class="test-card">
+        <h2>🔌 MetaMask检测</h2>
+        <button onclick="testMetaMask()">检测MetaMask</button>
+        <div id="metamaskResult" class="result"></div>
+    </div>
+
+    <div class="test-card">
+        <h2>🌐 网络请求测试</h2>
+        <button onclick="testNetworkRequest()">测试BSC网络请求</button>
+        <div id="networkResult" class="result"></div>
+    </div>
+
+    <div class="test-card">
+        <h2>💾 本地存储测试</h2>
+        <button onclick="testLocalStorage()">测试LocalStorage</button>
+        <div id="storageResult" class="result"></div>
+    </div>
+
+    <div class="test-card">
+        <h2>📦 外部资源测试</h2>
+        <button onclick="testExternalResources()">测试CDN资源</button>
+        <div id="resourceResult" class="result"></div>
+    </div>
+
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+    <script>
+        // 页面加载时自动检测协议
+        window.addEventListener('load', function() {
+            detectProtocol();
+        });
+
+        function detectProtocol() {
+            const protocol = window.location.protocol;
+            const host = window.location.host;
+            const pathname = window.location.pathname;
+            
+            let info = `协议: ${protocol}\n`;
+            info += `主机: ${host || '本地文件'}\n`;
+            info += `路径: ${pathname}\n`;
+            info += `完整URL: ${window.location.href}\n\n`;
+            
+            if (protocol === 'file:') {
+                info += '⚠️ 警告: 您正在使用file://协议访问\n';
+                info += '这可能导致Web3功能受限！\n\n';
+                info += '建议使用HTTP服务器访问：\n';
+                info += '1. npm run serve\n';
+                info += '2. python -m http.server\n';
+                info += '3. 或其他HTTP服务器';
+                document.getElementById('protocolInfo').className = 'result warning';
+            } else if (protocol === 'http:' || protocol === 'https:') {
+                info += '✅ 正在使用HTTP协议，Web3功能应该正常';
+                document.getElementById('protocolInfo').className = 'result success';
+            }
+            
+            document.getElementById('protocolInfo').textContent = info;
+        }
+
+        async function testMetaMask() {
+            const resultDiv = document.getElementById('metamaskResult');
+            let result = '🔍 MetaMask检测结果:\n\n';
+            
+            try {
+                // 检测window.ethereum
+                if (typeof window.ethereum === 'undefined') {
+                    result += '❌ window.ethereum 未找到\n';
+                    result += '请安装MetaMask钱包\n';
+                    resultDiv.className = 'result error';
+                } else {
+                    result += '✅ window.ethereum 已找到\n';
+                    result += `提供商: ${window.ethereum.isMetaMask ? 'MetaMask' : '其他钱包'}\n`;
+                    
+                    // 尝试连接
+                    try {
+                        const accounts = await window.ethereum.request({ 
+                            method: 'eth_requestAccounts' 
+                        });
+                        result += `✅ 连接成功\n`;
+                        result += `账户: ${accounts[0]}\n`;
+                        
+                        // 获取网络信息
+                        const chainId = await window.ethereum.request({ 
+                            method: 'eth_chainId' 
+                        });
+                        result += `网络ID: ${parseInt(chainId, 16)}\n`;
+                        
+                        resultDiv.className = 'result success';
+                    } catch (connectError) {
+                        result += `⚠️ 连接失败: ${connectError.message}\n`;
+                        resultDiv.className = 'result warning';
+                    }
+                }
+            } catch (error) {
+                result += `❌ 检测失败: ${error.message}\n`;
+                resultDiv.className = 'result error';
+            }
+            
+            resultDiv.textContent = result;
+        }
+
+        async function testNetworkRequest() {
+            const resultDiv = document.getElementById('networkResult');
+            let result = '🌐 网络请求测试:\n\n';
+            
+            try {
+                // 测试BSC测试网RPC请求
+                const response = await fetch('https://data-seed-prebsc-1-s1.binance.org:8545/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'eth_blockNumber',
+                        params: [],
+                        id: 1
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    result += '✅ BSC测试网连接成功\n';
+                    result += `当前区块: ${parseInt(data.result, 16)}\n`;
+                    resultDiv.className = 'result success';
+                } else {
+                    result += `❌ 请求失败: ${response.status}\n`;
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                result += `❌ 网络请求失败: ${error.message}\n`;
+                if (error.message.includes('CORS')) {
+                    result += '\n这通常是由于CORS限制导致的\n';
+                    result += 'file://协议下经常出现此问题';
+                }
+                resultDiv.className = 'result error';
+            }
+            
+            resultDiv.textContent = result;
+        }
+
+        function testLocalStorage() {
+            const resultDiv = document.getElementById('storageResult');
+            let result = '💾 本地存储测试:\n\n';
+            
+            try {
+                // 测试localStorage
+                const testKey = 'web3_test_' + Date.now();
+                const testValue = 'test_data';
+                
+                localStorage.setItem(testKey, testValue);
+                const retrieved = localStorage.getItem(testKey);
+                
+                if (retrieved === testValue) {
+                    result += '✅ localStorage 工作正常\n';
+                    localStorage.removeItem(testKey);
+                    resultDiv.className = 'result success';
+                } else {
+                    result += '❌ localStorage 读取失败\n';
+                    resultDiv.className = 'result error';
+                }
+                
+                // 测试sessionStorage
+                sessionStorage.setItem(testKey, testValue);
+                const sessionRetrieved = sessionStorage.getItem(testKey);
+                
+                if (sessionRetrieved === testValue) {
+                    result += '✅ sessionStorage 工作正常\n';
+                    sessionStorage.removeItem(testKey);
+                } else {
+                    result += '❌ sessionStorage 读取失败\n';
+                }
+                
+            } catch (error) {
+                result += `❌ 存储测试失败: ${error.message}\n`;
+                resultDiv.className = 'result error';
+            }
+            
+            resultDiv.textContent = result;
+        }
+
+        function testExternalResources() {
+            const resultDiv = document.getElementById('resourceResult');
+            let result = '📦 外部资源测试:\n\n';
+            
+            // 检测ethers.js是否加载
+            if (typeof ethers !== 'undefined') {
+                result += '✅ ethers.js CDN加载成功\n';
+                result += `版本: ${ethers.version}\n`;
+                resultDiv.className = 'result success';
+            } else {
+                result += '❌ ethers.js CDN加载失败\n';
+                result += 'file://协议可能阻止了CDN资源\n';
+                resultDiv.className = 'result error';
+            }
+            
+            // 测试图片加载
+            const img = new Image();
+            img.onload = function() {
+                result += '✅ 外部图片加载成功\n';
+                resultDiv.textContent = result;
+            };
+            img.onerror = function() {
+                result += '❌ 外部图片加载失败\n';
+                resultDiv.textContent = result;
+                resultDiv.className = 'result error';
+            };
+            img.src = 'https://via.placeholder.com/1x1.png';
+            
+            resultDiv.textContent = result;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BSC代币工厂 - 导航页面</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.2em;
+        }
+        
+        .page-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .page-card {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .page-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-color: #007bff;
+        }
+        
+        .page-card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        
+        .page-card p {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        
+        .page-card .status {
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+        
+        .status.working {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status.issue {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status.new {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,123,255,0.3);
+        }
+        
+        .features {
+            background: #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+        
+        .features h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .features ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .features li {
+            padding: 8px 0;
+            color: #555;
+        }
+        
+        .features li:before {
+            content: "✅ ";
+            margin-right: 10px;
+        }
+        
+        .note {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #856404;
+        }
+        
+        .note strong {
+            color: #533f03;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 BSC代币工厂</h1>
+        <p class="subtitle">基于BSC测试网的智能合约代币创建平台</p>
+        
+        <div class="note">
+            <strong>📋 使用说明：</strong> 请选择下面的页面进行操作。推荐使用"代币创建工具"页面，它具有最稳定的MetaMask集成。
+        </div>
+        
+        <div class="page-grid">
+            <!-- 新的代币创建页面 -->
+            <div class="page-card" onclick="window.open('create-token.html', '_blank')">
+                <div class="status new">🆕 推荐使用</div>
+                <h3>🪙 代币创建工具</h3>
+                <p>全新的代币创建页面，基于诊断页面的稳定连接逻辑构建，提供最佳的用户体验。</p>
+                <div class="features">
+                    <h4>✨ 特色功能：</h4>
+                    <ul>
+                        <li>自动环境检测</li>
+                        <li>稳定的MetaMask连接</li>
+                        <li>分步骤操作指导</li>
+                        <li>真实智能合约交互</li>
+                        <li>详细的操作日志</li>
+                    </ul>
+                </div>
+                <a href="create-token.html" class="btn" target="_blank">开始创建代币</a>
+            </div>
+            
+            <!-- 诊断页面 -->
+            <div class="page-card" onclick="window.open('debug-metamask.html', '_blank')">
+                <div class="status working">✅ 正常工作</div>
+                <h3>🔧 MetaMask诊断工具</h3>
+                <p>用于检测和诊断MetaMask连接问题的专用工具，可以验证环境配置和网络连接。</p>
+                <div class="features">
+                    <h4>🛠️ 诊断功能：</h4>
+                    <ul>
+                        <li>环境兼容性检测</li>
+                        <li>MetaMask连接测试</li>
+                        <li>网络配置验证</li>
+                        <li>连接问题修复</li>
+                    </ul>
+                </div>
+                <a href="debug-metamask.html" class="btn" target="_blank">打开诊断工具</a>
+            </div>
+            
+            <!-- 主应用页面 -->
+            <div class="page-card" onclick="window.open('index.html', '_blank')">
+                <div class="status issue">⚠️ 连接问题</div>
+                <h3>🏠 主应用页面</h3>
+                <p>原始的主应用界面，包含完整的功能，但目前存在MetaMask自动连接问题。</p>
+                <div class="features">
+                    <h4>🔧 已知问题：</h4>
+                    <ul style="list-style: none;">
+                        <li style="color: #dc3545;">❌ 自动连接失效</li>
+                        <li style="color: #dc3545;">❌ 需要手动点击连接</li>
+                        <li style="color: #28a745;">✅ 手动连接后功能正常</li>
+                    </ul>
+                </div>
+                <a href="index.html" class="btn" target="_blank">访问主应用</a>
+            </div>
+            
+            <!-- 连接测试页面 -->
+            <div class="page-card" onclick="window.open('test-connection.html', '_blank')">
+                <div class="status working">✅ 测试工具</div>
+                <h3>🧪 连接测试页面</h3>
+                <p>专门用于测试MetaMask连接功能的页面，可以对比不同连接方式的效果。</p>
+                <div class="features">
+                    <h4>🔬 测试功能：</h4>
+                    <ul>
+                        <li>自动连接测试</li>
+                        <li>手动连接测试</li>
+                        <li>连接状态对比</li>
+                        <li>详细调试信息</li>
+                    </ul>
+                </div>
+                <a href="test-connection.html" class="btn" target="_blank">开始测试</a>
+            </div>
+        </div>
+        
+        <div class="features">
+            <h3>🌟 平台特色</h3>
+            <ul>
+                <li>基于BSC测试网，安全可靠</li>
+                <li>智能合约自动化部署</li>
+                <li>支持ERC20标准代币</li>
+                <li>MetaMask钱包集成</li>
+                <li>实时交易状态跟踪</li>
+                <li>BSCScan区块链浏览器集成</li>
+            </ul>
+        </div>
+        
+        <div class="note">
+            <strong>💡 提示：</strong> 
+            <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>确保已安装MetaMask浏览器扩展</li>
+                <li>切换到BSC测试网 (Chain ID: 97)</li>
+                <li>准备少量测试BNB用于Gas费用</li>
+                <li>建议使用Chrome或Firefox浏览器</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,611 @@
+{
+  "contractAddress": "0x073faD54A73333EC1671522b9cCCbbBd153DA265",
+  "network": {
+    "name": "BSC Testnet",
+    "chainId": 97,
+    "rpcUrl": "https://bsc-testnet-rpc.publicnode.com",
+    "blockExplorer": "https://testnet.bscscan.com"
+  },
+  "abi": [
+    {
+      "type": "constructor",
+      "stateMutability": "undefined",
+      "payable": false,
+      "inputs": []
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "OwnershipTransferred",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "previousOwner",
+          "indexed": true
+        },
+        {
+          "type": "address",
+          "name": "newOwner",
+          "indexed": true
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "TokenCreated",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "token",
+          "indexed": true
+        },
+        {
+          "type": "address",
+          "name": "creator",
+          "indexed": true
+        },
+        {
+          "type": "string",
+          "name": "name",
+          "indexed": false
+        },
+        {
+          "type": "string",
+          "name": "symbol",
+          "indexed": false
+        },
+        {
+          "type": "uint256",
+          "name": "totalSupply",
+          "indexed": false
+        },
+        {
+          "type": "uint256",
+          "name": "timestamp",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "TokenDEXInitialized",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "token",
+          "indexed": true
+        },
+        {
+          "type": "address",
+          "name": "creator",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "anonymous": false,
+      "name": "TokenFullyActivated",
+      "inputs": [
+        {
+          "type": "address",
+          "name": "token",
+          "indexed": true
+        },
+        {
+          "type": "address",
+          "name": "creator",
+          "indexed": false
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "activateTokenTrading",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "tokenAddress"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "allTokens",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ],
+      "outputs": [
+        {
+          "type": "address",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "createAdvancedToken",
+      "constant": false,
+      "stateMutability": "payable",
+      "payable": true,
+      "inputs": [
+        {
+          "type": "string",
+          "name": "_name"
+        },
+        {
+          "type": "string",
+          "name": "_symbol"
+        },
+        {
+          "type": "uint256",
+          "name": "_totalSupply"
+        },
+        {
+          "type": "uint256",
+          "name": "_feeBuy"
+        },
+        {
+          "type": "uint256",
+          "name": "_feeSell"
+        },
+        {
+          "type": "tuple",
+          "name": "_config",
+          "components": [
+            {
+              "type": "address",
+              "name": "feeRecipient"
+            },
+            {
+              "type": "uint256",
+              "name": "maxTxPercent"
+            },
+            {
+              "type": "uint256",
+              "name": "maxWalletPercent"
+            },
+            {
+              "type": "uint256",
+              "name": "swapThreshold"
+            }
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "type": "address",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "createAndActivateAdvancedToken",
+      "constant": false,
+      "stateMutability": "payable",
+      "payable": true,
+      "inputs": [
+        {
+          "type": "string",
+          "name": "_name"
+        },
+        {
+          "type": "string",
+          "name": "_symbol"
+        },
+        {
+          "type": "uint256",
+          "name": "_totalSupply"
+        },
+        {
+          "type": "uint256",
+          "name": "_feeBuy"
+        },
+        {
+          "type": "uint256",
+          "name": "_feeSell"
+        },
+        {
+          "type": "tuple",
+          "name": "_config",
+          "components": [
+            {
+              "type": "address",
+              "name": "feeRecipient"
+            },
+            {
+              "type": "uint256",
+              "name": "maxTxPercent"
+            },
+            {
+              "type": "uint256",
+              "name": "maxWalletPercent"
+            },
+            {
+              "type": "uint256",
+              "name": "swapThreshold"
+            }
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "type": "address",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "createAndActivateToken",
+      "constant": false,
+      "stateMutability": "payable",
+      "payable": true,
+      "inputs": [
+        {
+          "type": "string",
+          "name": "_name"
+        },
+        {
+          "type": "string",
+          "name": "_symbol"
+        },
+        {
+          "type": "uint256",
+          "name": "_totalSupply"
+        },
+        {
+          "type": "uint256",
+          "name": "_feeBuy"
+        },
+        {
+          "type": "uint256",
+          "name": "_feeSell"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "address",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "createToken",
+      "constant": false,
+      "stateMutability": "payable",
+      "payable": true,
+      "inputs": [
+        {
+          "type": "string",
+          "name": "_name"
+        },
+        {
+          "type": "string",
+          "name": "_symbol"
+        },
+        {
+          "type": "uint256",
+          "name": "_totalSupply"
+        },
+        {
+          "type": "uint256",
+          "name": "_feeBuy"
+        },
+        {
+          "type": "uint256",
+          "name": "_feeSell"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "address",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "creationFee",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "factoryEnabled",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "bool",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "getAllTokensLength",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "getTokenStage",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "tokenAddress"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "uint8",
+          "name": "stage"
+        },
+        {
+          "type": "bool",
+          "name": "dexReady"
+        },
+        {
+          "type": "bool",
+          "name": "tradingActive"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "getTokens",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "_start"
+        },
+        {
+          "type": "uint256",
+          "name": "_end"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "address[]",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "initializeTokenDEX",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "tokenAddress"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "isFactoryToken",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": ""
+        }
+      ],
+      "outputs": [
+        {
+          "type": "bool",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "networkConfigs",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ],
+      "outputs": [
+        {
+          "type": "address",
+          "name": "router"
+        },
+        {
+          "type": "address",
+          "name": "wbnb"
+        },
+        {
+          "type": "address",
+          "name": "usdt"
+        },
+        {
+          "type": "bool",
+          "name": "enabled"
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "owner",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "address",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "renounceOwnership",
+      "constant": false,
+      "payable": false,
+      "inputs": [],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "setCreationFee",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "_fee"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "setFactoryEnabled",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "bool",
+          "name": "_enabled"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "setNetworkConfig",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "uint256",
+          "name": "_chainId"
+        },
+        {
+          "type": "address",
+          "name": "_router"
+        },
+        {
+          "type": "address",
+          "name": "_wbnb"
+        },
+        {
+          "type": "address",
+          "name": "_usdt"
+        },
+        {
+          "type": "bool",
+          "name": "_enabled"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "tokenCreators",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": ""
+        }
+      ],
+      "outputs": [
+        {
+          "type": "address",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "totalTokensCreated",
+      "constant": true,
+      "stateMutability": "view",
+      "payable": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "type": "uint256",
+          "name": ""
+        }
+      ]
+    },
+    {
+      "type": "function",
+      "name": "transferOwnership",
+      "constant": false,
+      "payable": false,
+      "inputs": [
+        {
+          "type": "address",
+          "name": "newOwner"
+        }
+      ],
+      "outputs": []
+    },
+    {
+      "type": "function",
+      "name": "withdrawFees",
+      "constant": false,
+      "payable": false,
+      "inputs": [],
+      "outputs": []
+    },
+    {
+      "type": "receive",
+      "stateMutability": "payable"
+    }
+  ]
+}

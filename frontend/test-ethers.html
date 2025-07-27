@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ethers.js 库加载测试</title>
+    <!-- 主要的 ethers.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    
+    <!-- 备用 CDN，如果主要的失败 -->
+    <script>
+        if (typeof ethers === 'undefined') {
+            document.write('<script src="https://unpkg.com/ethers@5.7.2/dist/ethers.umd.min.js"><\/script>');
+        }
+    </script>
+    
+    <!-- 第二个备用 CDN -->
+    <script>
+        setTimeout(function() {
+            if (typeof ethers === 'undefined') {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js';
+                script.onload = function() {
+                    console.log('✅ Ethers.js 备用库加载成功');
+                    updateStatus('✅ 备用库加载成功');
+                };
+                script.onerror = function() {
+                    console.error('❌ 所有 Ethers.js CDN 都加载失败');
+                    updateStatus('❌ 所有 CDN 都加载失败');
+                };
+                document.head.appendChild(script);
+            }
+        }, 100);
+    </script>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .test-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .status {
+            font-size: 18px;
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .success { background: rgba(76, 175, 80, 0.3); }
+        .error { background: rgba(244, 67, 54, 0.3); }
+        .info { background: rgba(33, 150, 243, 0.3); }
+        
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-card">
+        <h1>🧪 Ethers.js 库加载测试</h1>
+        <p>这个页面用于测试 Ethers.js 库是否正确加载</p>
+        
+        <div id="status" class="status info">
+            📡 正在检测库加载状态...
+        </div>
+        
+        <div id="details" class="code">
+            <div>检测结果将显示在这里...</div>
+        </div>
+        
+        <button onclick="testEthers()" id="testBtn">🔍 开始测试</button>
+        <button onclick="testWallet()" id="walletBtn" disabled>🔗 测试钱包连接</button>
+        <button onclick="clearResults()">🗑️ 清除结果</button>
+    </div>
+
+    <script>
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+        
+        function addDetail(message) {
+            const detailsEl = document.getElementById('details');
+            const div = document.createElement('div');
+            div.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+            detailsEl.appendChild(div);
+        }
+        
+        function clearResults() {
+            document.getElementById('details').innerHTML = '<div>检测结果将显示在这里...</div>';
+            updateStatus('📡 准备开始新的测试...');
+        }
+        
+        // 检查库是否加载
+        function checkLibraryLoaded() {
+            return new Promise((resolve) => {
+                let attempts = 0;
+                const maxAttempts = 50; // 5秒超时
+                
+                const checkInterval = setInterval(() => {
+                    attempts++;
+                    
+                    if (typeof ethers !== 'undefined') {
+                        clearInterval(checkInterval);
+                        addDetail('✅ Ethers.js 库加载成功');
+                        resolve(true);
+                    } else if (attempts >= maxAttempts) {
+                        clearInterval(checkInterval);
+                        addDetail('❌ Ethers.js 库加载超时');
+                        resolve(false);
+                    }
+                }, 100);
+            });
+        }
+        
+        async function testEthers() {
+            updateStatus('🔄 正在测试 Ethers.js...', 'info');
+            addDetail('开始 Ethers.js 库测试');
+            
+            // 检查库是否加载
+            const libraryLoaded = await checkLibraryLoaded();
+            
+            if (!libraryLoaded) {
+                updateStatus('❌ Ethers.js 库未加载', 'error');
+                addDetail('错误: 无法加载 Ethers.js 库');
+                return;
+            }
+            
+            try {
+                // 测试基本功能
+                addDetail(`📦 Ethers.js 版本: ${ethers.version}`);
+                addDetail(`🔧 可用模块: ${Object.keys(ethers).join(', ')}`);
+                
+                // 测试工具函数
+                const testAddress = '0x073faD54A73333EC1671522b9cCCbbBd153DA265';
+                const isValid = ethers.utils.isAddress(testAddress);
+                addDetail(`🏠 地址验证测试: ${isValid ? '✅ 通过' : '❌ 失败'}`);
+                
+                // 测试数值转换
+                const testAmount = ethers.utils.parseEther('1.0');
+                addDetail(`💰 数值转换测试: ${testAmount.toString()} wei`);
+                
+                updateStatus('✅ Ethers.js 测试通过', 'success');
+                document.getElementById('walletBtn').disabled = false;
+                
+            } catch (error) {
+                updateStatus('❌ Ethers.js 测试失败', 'error');
+                addDetail(`错误详情: ${error.message}`);
+            }
+        }
+        
+        async function testWallet() {
+            updateStatus('🔄 正在测试钱包连接...', 'info');
+            addDetail('开始钱包连接测试');
+            
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    throw new Error('请安装 MetaMask 钱包');
+                }
+                
+                addDetail('🦊 检测到 MetaMask');
+                
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                addDetail('🔗 创建 Provider 成功');
+                
+                const accounts = await provider.send("eth_requestAccounts", []);
+                addDetail(`👤 连接账户: ${accounts[0]}`);
+                
+                const signer = provider.getSigner();
+                const address = await signer.getAddress();
+                addDetail(`📍 签名者地址: ${address}`);
+                
+                const balance = await provider.getBalance(address);
+                const balanceEth = ethers.utils.formatEther(balance);
+                addDetail(`💰 账户余额: ${balanceEth} BNB`);
+                
+                const network = await provider.getNetwork();
+                addDetail(`🌐 网络信息: ${network.name} (Chain ID: ${network.chainId})`);
+                
+                updateStatus('✅ 钱包连接测试通过', 'success');
+                
+            } catch (error) {
+                updateStatus('❌ 钱包连接测试失败', 'error');
+                addDetail(`错误详情: ${error.message}`);
+            }
+        }
+        
+        // 页面加载时自动开始测试
+        window.addEventListener('load', function() {
+            addDetail('📄 页面加载完成');
+            setTimeout(testEthers, 1000);
+        });
+    </script>
+</body>
+</html>

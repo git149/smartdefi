@@ -1,0 +1,98 @@
+{
+  "name": "abc",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "serve": "vue-cli-service serve --port 3000",
+    "dev": "node simple-vue-server.js",
+    "start": "npm run dev",
+    "vue:serve": "node simple-vue-server.js",
+    "build": "vue-cli-service build",
+    "lint": "vue-cli-service lint",
+    "deploy": "node scripts/deploy-and-test.js",
+    "deploy:factory": "node scripts/deploy-staged-token-factory.js",
+    "create:token": "node scripts/create-token.js",
+    "compile:contracts": "node scripts/compile-contract.js",
+    "deploy:quick": "npm run deploy",
+    "token:create": "npm run create:token",
+    "help:deploy": "node scripts/create-token.js --help",
+    "summary": "node scripts/show-summary.js",
+    "status": "npm run summary",
+    "frontend": "node frontend/start-server.js",
+    "start:frontend": "npm run frontend",
+    "verify:contract": "node scripts/verify-contract.js",
+    "deploy:simple-factory": "node scripts/deploy-simple-factory.js",
+    "deploy:staged-factory": "npx hardhat run scripts/deploy-staged-factory.js --network bscTestnet",
+    "analyze:contract": "node scripts/analyze-contract.js",
+    "serve:static": "python -m http.server 8080"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.9.6",
+    "amfe-flexible": "^2.2.1",
+    "axios": "^0.21.1",
+    "bignumber.js": "^9.0.2",
+    "core-js": "^3.6.5",
+    "dayjs": "^1.11.13",
+    "dotenv": "^17.2.1",
+    "ethers": "^6.15.0",
+    "font-awesome": "^4.7.0",
+    "jquery": "^3.6.0",
+    "js-md5": "^0.7.3",
+    "json-bigint": "^1.0.0",
+    "moment": "^2.29.1",
+    "router": "^1.3.5",
+    "stompjs": "^2.3.3",
+    "style-loader": "^2.0.0",
+    "swiper": "^8.1.6",
+    "vant": "^2.12.47",
+    "vue": "^2.6.11",
+    "vue-clipboard2": "^0.3.3",
+    "vue-drag-verify": "https://registry.npmjs.org/vue-drag-verify/-/vue-drag-verify-1.0.6.tgz",
+    "vue-i18n": "^8.25.0",
+    "vue-router": "^3.0.7",
+    "vuex": "^3.6.2",
+    "web3": "^4.16.0"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.1.0",
+    "@vue/cli-plugin-babel": "~4.5.0",
+    "@vue/cli-plugin-eslint": "~4.5.0",
+    "@vue/cli-service": "~4.5.0",
+    "babel-eslint": "^10.1.0",
+    "eslint": "^6.7.2",
+    "eslint-plugin-vue": "^6.2.2",
+    "hardhat": "^2.26.1",
+    "less-loader": "^7.3.0",
+    "postcss-import": "^14.0.2",
+    "postcss-pxtorem": "^5.1.1",
+    "postcss-url": "^10.1.3",
+    "sass": "^1.52.1",
+    "sass-loader": "^8.0.2",
+    "solc": "^0.8.30",
+    "vue-awesome-swiper": "^3.1.3",
+    "vue-concise-slider": "^4.2.5",
+    "vue-template-compiler": "^2.6.11"
+  },
+  "eslintConfig": {
+    "root": true,
+    "env": {
+      "node": true
+    },
+    "extends": [
+      "plugin:vue/essential",
+      "eslint:recommended"
+    ],
+    "parserOptions": {
+      "parser": "babel-eslint"
+    },
+    "rules": {},
+    "globals": {
+      "define": true
+    }
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ]
+}

@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StagedToken 代币创建器 - BSC测试网</title>
+    <!-- 主要的 ethers.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
+    <!-- 备用 CDN，如果主要的失败 -->
+    <script>
+        if (typeof ethers === 'undefined') {
+            document.write('<script src="https://unpkg.com/ethers@5.7.2/dist/ethers.umd.min.js"><\/script>');
+        }
+    </script>
+
+    <!-- 第二个备用 CDN -->
+    <script>
+        setTimeout(function() {
+            if (typeof ethers === 'undefined') {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js';
+                script.onload = function() {
+                    console.log('✅ Ethers.js 备用库加载成功');
+                };
+                script.onerror = function() {
+                    console.error('❌ 所有 Ethers.js CDN 都加载失败');
+                    showLibraryError();
+                };
+                document.head.appendChild(script);
+            }
+        }, 100);
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .status-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border-left: 5px solid #28a745;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .status-icon {
+            font-size: 3em;
+        }
+
+        .status-text h3 {
+            color: #495057;
+            margin-bottom: 5px;
+        }
+
+        .status-text p {
+            color: #6c757d;
+        }
+
+        .wallet-info {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .wallet-info div {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-family: monospace;
+        }
+
+        .connect-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+
+        .connect-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .connect-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .form-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            border: 1px solid #e9ecef;
+        }
+
+        .form-title {
+            color: #495057;
+            margin-bottom: 25px;
+            font-size: 1.5em;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group small {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-top: 5px;
+            display: block;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .templates {
+            margin: 25px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .templates h4 {
+            margin-bottom: 15px;
+            color: #495057;
+        }
+
+        .template-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .template-btn {
+            background: white;
+            border: 2px solid #dee2e6;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .template-btn:hover {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+
+        .fee-info {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .fee-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .fee-item.total {
+            font-weight: bold;
+            border-top: 1px solid #bbdefb;
+            padding-top: 8px;
+            margin-top: 8px;
+        }
+
+        .create-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .create-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .create-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .transaction-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+
+        .transaction-status {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+
+        .status-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        }
+
+        .step-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #dee2e6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .status-step.active .step-icon {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-step.completed .step-icon {
+            background: #007bff;
+            color: white;
+        }
+
+        .transaction-details {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .detail-item a {
+            color: #007bff;
+            text-decoration: none;
+            font-family: monospace;
+        }
+
+        .footer {
+            background: #343a40;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .footer a {
+            color: #adb5bd;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        .footer a:hover {
+            color: white;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6c757d;
+        }
+
+        .modal-body h4 {
+            color: #495057;
+            margin: 20px 0 10px 0;
+        }
+
+        .modal-body ul {
+            margin-left: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .template-buttons {
+                flex-direction: column;
+            }
+            
+            .transaction-status {
+                flex-direction: column;
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>🪙 StagedToken 创建器</h1>
+            <p>在BSC测试网上创建您的专属代币</p>
+        </div>
+
+        <!-- 主要内容 -->
+        <div class="main-content">
+            <!-- 连接状态 -->
+            <div class="status-card" id="statusCard">
+                <div class="status-icon" id="statusIcon">🔌</div>
+                <div class="status-text">
+                    <h3 id="statusTitle">请连接MetaMask钱包</h3>
+                    <p id="statusDesc">连接到BSC测试网开始创建代币</p>
+                    <button class="connect-btn" id="connectBtn">连接钱包</button>
+                </div>
+                <div class="wallet-info" id="walletInfo" style="display: none;">
+                    <div>
+                        <span>钱包地址:</span>
+                        <span id="walletAddress">-</span>
+                    </div>
+                    <div>
+                        <span>BNB余额:</span>
+                        <span id="walletBalance">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 代币创建表单 -->
+            <div class="form-card" id="formCard" style="display: none;">
+                <h2 class="form-title">创建新代币</h2>
+                <form class="token-form" id="tokenForm">
+                    <div class="form-group">
+                        <label for="tokenName">代币名称</label>
+                        <input type="text" id="tokenName" placeholder="例如: My Awesome Token" required>
+                        <small>代币的完整名称</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tokenSymbol">代币符号</label>
+                        <input type="text" id="tokenSymbol" placeholder="例如: MAT" required maxlength="10">
+                        <small>代币的简称，通常3-5个字符</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="totalSupply">总供应量</label>
+                        <input type="number" id="totalSupply" placeholder="1000000" required min="1">
+                        <small>代币的总发行量</small>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="buyFee">买入费用 (%)</label>
+                            <input type="number" id="buyFee" placeholder="2" min="0" max="10" step="0.1">
+                            <small>买入时收取的费用 (0-10%)</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="sellFee">卖出费用 (%)</label>
+                            <input type="number" id="sellFee" placeholder="5" min="0" max="10" step="0.1">
+                            <small>卖出时收取的费用 (0-10%)</small>
+                        </div>
+                    </div>
+
+                    <!-- 预设模板 -->
+                    <div class="templates">
+                        <h4>快速模板</h4>
+                        <div class="template-buttons">
+                            <button type="button" class="template-btn" data-template="standard">
+                                标准代币 (1% / 3%)
+                            </button>
+                            <button type="button" class="template-btn" data-template="low-fee">
+                                低费用 (0.5% / 1%)
+                            </button>
+                            <button type="button" class="template-btn" data-template="high-fee">
+                                高费用 (3% / 7%)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 费用信息 -->
+                    <div class="fee-info">
+                        <div class="fee-item">
+                            <span>创建费用:</span>
+                            <span id="creationFee">0.03 BNB</span>
+                        </div>
+                        <div class="fee-item">
+                            <span>预估Gas费:</span>
+                            <span id="estimatedGas">~0.01 BNB</span>
+                        </div>
+                        <div class="fee-item total">
+                            <span>总费用:</span>
+                            <span id="totalFee">~0.04 BNB</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="create-btn" id="createBtn">
+                        <span class="btn-text">创建代币</span>
+                        <span class="btn-loader" style="display: none;">⏳ 创建中...</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- 交易状态 -->
+            <div class="transaction-card" id="transactionCard" style="display: none;">
+                <h3>交易状态</h3>
+                <div class="transaction-status" id="transactionStatus">
+                    <div class="status-step active" id="step1">
+                        <div class="step-icon">1</div>
+                        <div class="step-text">确认交易</div>
+                    </div>
+                    <div class="status-step" id="step2">
+                        <div class="step-icon">2</div>
+                        <div class="step-text">等待确认</div>
+                    </div>
+                    <div class="status-step" id="step3">
+                        <div class="step-icon">3</div>
+                        <div class="step-text">创建完成</div>
+                    </div>
+                </div>
+                <div class="transaction-details" id="transactionDetails">
+                    <div class="detail-item">
+                        <span>交易哈希:</span>
+                        <a href="#" target="_blank" id="txHash">-</a>
+                    </div>
+                    <div class="detail-item">
+                        <span>代币地址:</span>
+                        <a href="#" target="_blank" id="tokenAddress">-</a>
+                        <button id="retryAddressBtn" onclick="manualRetryAddress()" style="display: none; margin-left: 10px; padding: 4px 8px; font-size: 12px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">🔄 重试获取</button>
+                    </div>
+                    <div class="detail-item">
+                        <span>Gas使用:</span>
+                        <span id="gasUsed">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 页脚 -->
+        <div class="footer">
+            <a href="https://testnet.bscscan.com" target="_blank">BSCScan测试网</a>
+            <a href="https://testnet.binance.org/faucet-smart" target="_blank">获取测试BNB</a>
+            <a href="#" onclick="showHelp()">使用帮助</a>
+            <br><br>
+            <small>工厂合约: <a href="https://testnet.bscscan.com/address/0x073faD54A73333EC1671522b9cCCbbBd153DA265" target="_blank">0x073f...A265</a> | BSC测试网 (Chain ID: 97)</small>
+        </div>
+    </div>
+
+    <!-- 帮助模态框 -->
+    <div class="modal" id="helpModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>使用帮助</h3>
+                <button class="modal-close" onclick="closeHelp()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <h4>1. 连接MetaMask</h4>
+                <p>点击"连接钱包"按钮，选择MetaMask并授权连接。</p>
+
+                <h4>2. 配置BSC测试网</h4>
+                <p>确保MetaMask已添加BSC测试网络：</p>
+                <ul>
+                    <li>网络名称: BSC Testnet</li>
+                    <li>RPC URL: https://data-seed-prebsc-1-s1.binance.org:8545/</li>
+                    <li>Chain ID: 97</li>
+                    <li>符号: BNB</li>
+                </ul>
+
+                <h4>3. 获取测试BNB</h4>
+                <p>访问 <a href="https://testnet.binance.org/faucet-smart" target="_blank">BSC测试网水龙头</a> 获取免费的测试BNB。</p>
+
+                <h4>4. 创建代币</h4>
+                <p>填写代币信息，确认交易，等待区块链确认即可。</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 合约配置
+        const CONTRACT_CONFIG = {
+            FACTORY_ADDRESS: '0x073faD54A73333EC1671522b9cCCbbBd153DA265',
+            BSC_TESTNET_CHAIN_ID: 97,
+            BSC_TESTNET_RPC: 'https://data-seed-prebsc-1-s1.binance.org:8545/',
+            BSCSCAN_BASE_URL: 'https://testnet.bscscan.com'
+        };
+
+        // 工厂合约ABI
+        const FACTORY_ABI = [
+            "function createToken(string memory name, string memory symbol, uint256 totalSupply, uint256 buyFee, uint256 sellFee) external payable returns (address)",
+            "function creationFee() external view returns (uint256)",
+            "event TokenCreated(address indexed creator, address indexed token, string name, string symbol)"
+        ];
+
+        // 全局变量
+        let provider;
+        let signer;
+        let factory;
+        let userAddress;
+
+        // 显示库加载错误
+        function showLibraryError() {
+            updateStatus('❌', '库加载失败', 'Ethers.js 库加载失败，请刷新页面重试');
+            document.getElementById('connectBtn').disabled = true;
+            document.getElementById('connectBtn').textContent = '库加载失败';
+
+            // 显示调试信息
+            console.error('🔍 调试信息:');
+            console.error('- ethers 对象:', typeof ethers);
+            console.error('- window.ethereum:', typeof window.ethereum);
+            console.error('- 用户代理:', navigator.userAgent);
+        }
+
+        // 显示库加载成功信息
+        function showLibrarySuccess() {
+            console.log('🔍 库加载成功信息:');
+            console.log('- ethers 版本:', ethers.version);
+            console.log('- ethers 对象:', ethers);
+            console.log('- window.ethereum:', typeof window.ethereum);
+        }
+
+        // 检查库是否加载
+        function checkLibraryLoaded() {
+            return new Promise((resolve) => {
+                let attempts = 0;
+                const maxAttempts = 50; // 5秒超时
+
+                const checkInterval = setInterval(() => {
+                    attempts++;
+
+                    if (typeof ethers !== 'undefined') {
+                        clearInterval(checkInterval);
+                        console.log('✅ Ethers.js 库加载成功');
+                        showLibrarySuccess();
+                        resolve(true);
+                    } else if (attempts >= maxAttempts) {
+                        clearInterval(checkInterval);
+                        console.error('❌ Ethers.js 库加载超时');
+                        showLibraryError();
+                        resolve(false);
+                    }
+                }, 100);
+            });
+        }
+
+        // 初始化应用
+        async function init() {
+            // 防止重复初始化
+            if (window.appInitialized) {
+                console.log('📄 应用已经初始化，跳过');
+                return;
+            }
+
+            console.log('📄 开始初始化应用...');
+
+            // 首先检查库是否加载
+            const libraryLoaded = await checkLibraryLoaded();
+            if (!libraryLoaded) {
+                return;
+            }
+
+            if (typeof window.ethereum === 'undefined') {
+                showError('请安装MetaMask钱包');
+                return;
+            }
+
+            // 设置事件监听器
+            document.getElementById('connectBtn').addEventListener('click', connectWallet);
+            document.getElementById('tokenForm').addEventListener('submit', createToken);
+
+            // 模板按钮事件
+            document.querySelectorAll('.template-btn').forEach(btn => {
+                btn.addEventListener('click', applyTemplate);
+            });
+
+            // 检查是否已连接
+            if (window.ethereum.selectedAddress) {
+                await connectWallet();
+            }
+
+            // 标记初始化完成
+            window.appInitialized = true;
+            console.log('✅ 应用初始化完成');
+        }
+
+        // 连接钱包
+        async function connectWallet() {
+            try {
+                // 再次检查 ethers 是否可用
+                if (typeof ethers === 'undefined') {
+                    throw new Error('Ethers.js 库未加载，请刷新页面重试');
+                }
+
+                updateStatus('🔄', '连接中...', '正在连接MetaMask钱包');
+
+                // 检查 MetaMask 是否可用
+                if (typeof window.ethereum === 'undefined') {
+                    throw new Error('请安装MetaMask钱包');
+                }
+
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                signer = provider.getSigner();
+                userAddress = await signer.getAddress();
+
+                // 检查网络
+                const network = await provider.getNetwork();
+                if (network.chainId !== CONTRACT_CONFIG.BSC_TESTNET_CHAIN_ID) {
+                    await switchToBSCTestnet();
+                    return;
+                }
+
+                // 获取余额
+                const balance = await provider.getBalance(userAddress);
+                const balanceInBNB = ethers.utils.formatEther(balance);
+
+                // 初始化工厂合约
+                factory = new ethers.Contract(CONTRACT_CONFIG.FACTORY_ADDRESS, FACTORY_ABI, signer);
+
+                // 更新UI
+                updateStatus('✅', '钱包已连接', `已连接到BSC测试网`);
+                document.getElementById('walletAddress').textContent = `${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
+                document.getElementById('walletBalance').textContent = `${parseFloat(balanceInBNB).toFixed(4)} BNB`;
+                document.getElementById('walletInfo').style.display = 'block';
+                document.getElementById('connectBtn').textContent = '已连接';
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('formCard').style.display = 'block';
+
+                // 获取创建费用
+                try {
+                    const creationFee = await factory.creationFee();
+                    document.getElementById('creationFee').textContent = `${ethers.utils.formatEther(creationFee)} BNB`;
+                } catch (error) {
+                    console.error('获取创建费用失败:', error);
+                }
+
+            } catch (error) {
+                console.error('连接钱包失败:', error);
+                showError(`连接失败: ${error.message}`);
+            }
+        }
+
+        // 切换到BSC测试网
+        async function switchToBSCTestnet() {
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: '0x61' }], // 97 in hex
+                });
+                await connectWallet();
+            } catch (switchError) {
+                if (switchError.code === 4902) {
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{
+                                chainId: '0x61',
+                                chainName: 'BSC Testnet',
+                                nativeCurrency: {
+                                    name: 'BNB',
+                                    symbol: 'BNB',
+                                    decimals: 18
+                                },
+                                rpcUrls: ['https://data-seed-prebsc-1-s1.binance.org:8545/'],
+                                blockExplorerUrls: ['https://testnet.bscscan.com/']
+                            }]
+                        });
+                        await connectWallet();
+                    } catch (addError) {
+                        showError('添加BSC测试网失败');
+                    }
+                } else {
+                    showError('切换网络失败');
+                }
+            }
+        }
+
+        // 应用模板
+        function applyTemplate(event) {
+            const template = event.target.dataset.template;
+            const templates = {
+                'standard': { buyFee: 1, sellFee: 3 },
+                'low-fee': { buyFee: 0.5, sellFee: 1 },
+                'high-fee': { buyFee: 3, sellFee: 7 }
+            };
+
+            if (templates[template]) {
+                document.getElementById('buyFee').value = templates[template].buyFee;
+                document.getElementById('sellFee').value = templates[template].sellFee;
+            }
+        }
+
+        // 创建代币
+        async function createToken(event) {
+            event.preventDefault();
+
+            try {
+                const name = document.getElementById('tokenName').value;
+                const symbol = document.getElementById('tokenSymbol').value;
+                const totalSupply = document.getElementById('totalSupply').value;
+                const buyFee = document.getElementById('buyFee').value || 0;
+                const sellFee = document.getElementById('sellFee').value || 0;
+
+                if (!name || !symbol || !totalSupply) {
+                    showError('请填写所有必填字段');
+                    return;
+                }
+
+                // 显示交易状态
+                document.getElementById('transactionCard').style.display = 'block';
+                updateTransactionStep(1);
+
+                // 禁用按钮
+                const createBtn = document.getElementById('createBtn');
+                createBtn.disabled = true;
+                document.querySelector('.btn-text').style.display = 'none';
+                document.querySelector('.btn-loader').style.display = 'inline';
+
+                // 获取创建费用
+                const creationFee = await factory.creationFee();
+
+                // 创建代币
+                const tx = await factory.createToken(
+                    name,
+                    symbol,
+                    totalSupply,
+                    Math.floor(parseFloat(buyFee) * 10) / 10,
+                    Math.floor(parseFloat(sellFee) * 10) / 10,
+                    { value: creationFee }
+                );
+
+                // 更新交易哈希
+                document.getElementById('txHash').textContent = `${tx.hash.slice(0,10)}...${tx.hash.slice(-8)}`;
+                document.getElementById('txHash').href = `${CONTRACT_CONFIG.BSCSCAN_BASE_URL}/tx/${tx.hash}`;
+
+                // 保存交易信息供重试使用
+                currentTxHash = tx.hash;
+                currentTokenData = { name, symbol, totalSupply, buyFee, sellFee };
+
+                updateTransactionStep(2);
+
+                // 等待确认
+                const receipt = await tx.wait();
+                console.log('交易回执:', receipt);
+
+                // 多种方法解析TokenCreated事件
+                let tokenAddress = null;
+                let parseMethod = '';
+
+                // 方法1: 使用receipt.events (ethers v5风格)
+                if (receipt.events && receipt.events.length > 0) {
+                    console.log('尝试方法1: receipt.events');
+                    const tokenCreatedEvent = receipt.events.find(
+                        event => event.event === 'TokenCreated'
+                    );
+                    if (tokenCreatedEvent && tokenCreatedEvent.args) {
+                        tokenAddress = tokenCreatedEvent.args.token;
+                        parseMethod = 'receipt.events';
+                        console.log('方法1成功，代币地址:', tokenAddress);
+                    }
+                }
+
+                // 方法2: 使用合约接口解析日志
+                if (!tokenAddress && receipt.logs && receipt.logs.length > 0) {
+                    console.log('尝试方法2: 合约接口解析日志');
+                    try {
+                        const iface = new ethers.utils.Interface(FACTORY_ABI);
+                        for (const log of receipt.logs) {
+                            try {
+                                const parsedLog = iface.parseLog(log);
+                                console.log('解析的日志:', parsedLog);
+                                if (parsedLog.name === 'TokenCreated') {
+                                    tokenAddress = parsedLog.args.token;
+                                    parseMethod = '合约接口解析';
+                                    console.log('方法2成功，代币地址:', tokenAddress);
+                                    break;
+                                }
+                            } catch (logError) {
+                                // 忽略无法解析的日志
+                                console.log('跳过无法解析的日志:', logError.message);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('接口解析失败:', error);
+                    }
+                }
+
+                // 方法3: 手动解析日志数据
+                if (!tokenAddress && receipt.logs && receipt.logs.length > 0) {
+                    console.log('尝试方法3: 手动解析日志');
+                    try {
+                        // TokenCreated事件的签名哈希
+                        const tokenCreatedTopic = ethers.utils.id('TokenCreated(address,address,string,string)');
+                        console.log('TokenCreated事件签名:', tokenCreatedTopic);
+
+                        for (const log of receipt.logs) {
+                            console.log('检查日志:', log);
+                            if (log.topics && log.topics[0] === tokenCreatedTopic) {
+                                // 第二个topic是token地址 (indexed参数)
+                                if (log.topics.length >= 3) {
+                                    tokenAddress = ethers.utils.getAddress('0x' + log.topics[2].slice(26));
+                                    parseMethod = '手动解析日志';
+                                    console.log('方法3成功，代币地址:', tokenAddress);
+                                    break;
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.error('手动解析失败:', error);
+                    }
+                }
+
+                // 显示解析结果
+                if (tokenAddress) {
+                    console.log(`✅ 成功获取代币地址: ${tokenAddress} (使用${parseMethod})`);
+
+                    // 更新UI
+                    document.getElementById('tokenAddress').textContent = `${tokenAddress.slice(0,10)}...${tokenAddress.slice(-8)}`;
+                    document.getElementById('tokenAddress').href = `${CONTRACT_CONFIG.BSCSCAN_BASE_URL}/address/${tokenAddress}`;
+                    document.getElementById('gasUsed').textContent = receipt.gasUsed.toString();
+
+                    updateTransactionStep(3);
+
+                    // 显示详细的成功信息
+                    showSuccess(`
+                        <div style="text-align: left;">
+                            <div><strong>🎉 代币创建成功！</strong></div>
+                            <div style="margin-top: 8px;">
+                                <strong>代币信息:</strong><br>
+                                名称: ${name}<br>
+                                符号: ${symbol}<br>
+                                总供应量: ${totalSupply}<br>
+                                买入手续费: ${buyFee}%<br>
+                                卖出手续费: ${sellFee}%
+                            </div>
+                            <div style="margin-top: 8px;">
+                                <strong>合约地址:</strong><br>
+                                <a href="${CONTRACT_CONFIG.BSCSCAN_BASE_URL}/address/${tokenAddress}" target="_blank" style="color: #007bff; text-decoration: none;">
+                                    ${tokenAddress}
+                                </a>
+                            </div>
+                            <div style="margin-top: 8px;">
+                                <strong>交易哈希:</strong><br>
+                                <a href="${CONTRACT_CONFIG.BSCSCAN_BASE_URL}/tx/${tx.hash}" target="_blank" style="color: #007bff; text-decoration: none;">
+                                    ${tx.hash}
+                                </a>
+                            </div>
+                        </div>
+                    `);
+
+                    // 保存到历史记录
+                    saveToHistory({
+                        name, symbol, totalSupply, buyFee, sellFee,
+                        tokenAddress, txHash: tx.hash,
+                        timestamp: new Date().toISOString()
+                    });
+
+                } else {
+                    console.error('❌ 初次解析失败，开始重试...');
+                    console.log('交易回执详情:', JSON.stringify(receipt, null, 2));
+
+                    // 显示重试状态
+                    updateStatus('🔄', '重试中', '正在尝试重新获取代币地址...');
+
+                    // 尝试重试获取代币地址
+                    const retryTokenAddress = await retryGetTokenAddress(tx.hash);
+
+                    if (retryTokenAddress) {
+                        console.log(`✅ 重试成功！获取到代币地址: ${retryTokenAddress}`);
+
+                        // 更新UI
+                        document.getElementById('tokenAddress').textContent = `${retryTokenAddress.slice(0,10)}...${retryTokenAddress.slice(-8)}`;
+                        document.getElementById('tokenAddress').href = `${CONTRACT_CONFIG.BSCSCAN_BASE_URL}/address/${retryTokenAddress}`;
+                        document.getElementById('gasUsed').textContent = receipt.gasUsed.toString();
+
+                        updateTransactionStep(3);
+
+                        // 显示成功信息
+                        showSuccess(`
+                            <div style="text-align: left;">
+                                <div><strong>🎉 代币创建成功！(重试获取)</strong></div>
+                                <div style="margin-top: 8px;">
+                                    <strong>代币信息:</strong><br>
+                                    名称: ${name}<br>
+                                    符号: ${symbol}<br>
+                                    总供应量: ${totalSupply}<br>
+                                    买入手续费: ${buyFee}%<br>
+                                    卖出手续费: ${sellFee}%
+                                </div>
+                                <div style="margin-top: 8px;">
+                                    <strong>合约地址:</strong><br>
+                                    <a href="${CONTRACT_CONFIG.BSCSCAN_BASE_URL}/address/${retryTokenAddress}" target="_blank" style="color: #007bff; text-decoration: none;">
+                                        ${retryTokenAddress}
+                                    </a>
+                                </div>
+                                <div style="margin-top: 8px;">
+                                    <strong>交易哈希:</strong><br>
+                                    <a href="${CONTRACT_CONFIG.BSCSCAN_BASE_URL}/tx/${tx.hash}" target="_blank" style="color: #007bff; text-decoration: none;">
+                                        ${tx.hash}
+                                    </a>
+                                </div>
+                            </div>
+                        `);
+
+                        // 保存到历史记录
+                        saveToHistory({
+                            name, symbol, totalSupply, buyFee, sellFee,
+                            tokenAddress: retryTokenAddress, txHash: tx.hash,
+                            timestamp: new Date().toISOString()
+                        });
+
+                    } else {
+                        console.error('❌ 重试也失败了，显示手动查看指引');
+
+                        // 提供更详细的错误信息和解决方案
+                        showError(`
+                            <div style="text-align: left;">
+                                <div><strong>⚠️ 代币创建成功，但无法自动获取地址</strong></div>
+                                <div style="margin-top: 8px;">
+                                    交易已成功执行，但前端无法解析事件日志。<br>
+                                    <strong>已尝试多种解析方法和重试机制。</strong><br>
+                                    请通过以下方式查看代币信息：
+                                </div>
+                                <div style="margin-top: 8px;">
+                                    <strong>1. 查看交易详情:</strong><br>
+                                    <a href="${CONTRACT_CONFIG.BSCSCAN_BASE_URL}/tx/${tx.hash}" target="_blank" style="color: #007bff; text-decoration: none;">
+                                        ${tx.hash}
+                                    </a>
+                                </div>
+                                <div style="margin-top: 8px;">
+                                    <strong>2. 在BSCScan中:</strong><br>
+                                    • 点击上方交易链接<br>
+                                    • 查看 "To" 字段中的合约地址<br>
+                                    • 或在 "Logs" 标签页中找到TokenCreated事件<br>
+                                    • 代币地址在事件的第二个参数中
+                                </div>
+                                <div style="margin-top: 8px;">
+                                    <strong>3. 调试信息:</strong><br>
+                                    Gas使用量: ${receipt.gasUsed.toString()}<br>
+                                    日志数量: ${receipt.logs ? receipt.logs.length : 0}
+                                </div>
+                                <div style="margin-top: 8px; padding: 8px; background-color: #f8f9fa; border-radius: 4px; font-size: 12px;">
+                                    <strong>技术说明:</strong> 这通常是由于网络延迟或事件解析问题导致的。代币已成功创建，只是前端无法自动获取地址。
+                                </div>
+                            </div>
+                        `);
+
+                        // 仍然更新交易步骤，显示部分信息
+                        document.getElementById('gasUsed').textContent = receipt.gasUsed.toString();
+                        updateTransactionStep(3);
+
+                        // 显示重试按钮
+                        document.getElementById('retryAddressBtn').style.display = 'inline-block';
+                    }
+                }
+
+            } catch (error) {
+                console.error('创建代币失败:', error);
+                showError(`创建失败: ${error.message}`);
+            } finally {
+                // 恢复按钮
+                const createBtn = document.getElementById('createBtn');
+                createBtn.disabled = false;
+                document.querySelector('.btn-text').style.display = 'inline';
+                document.querySelector('.btn-loader').style.display = 'none';
+            }
+        }
+
+        // 更新状态
+        function updateStatus(icon, title, desc) {
+            document.getElementById('statusIcon').textContent = icon;
+            document.getElementById('statusTitle').textContent = title;
+
+            // 支持HTML内容
+            const descElement = document.getElementById('statusDesc');
+            if (desc.includes('<')) {
+                descElement.innerHTML = desc;
+            } else {
+                descElement.textContent = desc;
+            }
+        }
+
+        // 更新交易步骤
+        function updateTransactionStep(step) {
+            for (let i = 1; i <= 3; i++) {
+                const stepElement = document.getElementById(`step${i}`);
+                if (i < step) {
+                    stepElement.className = 'status-step completed';
+                } else if (i === step) {
+                    stepElement.className = 'status-step active';
+                } else {
+                    stepElement.className = 'status-step';
+                }
+            }
+        }
+
+        // 显示错误
+        function showError(message) {
+            updateStatus('❌', '错误', message);
+        }
+
+        // 显示成功
+        function showSuccess(message) {
+            updateStatus('🎉', '成功', message);
+        }
+
+        // 重试获取代币地址（备用方法）
+        async function retryGetTokenAddress(txHash, maxRetries = 3) {
+            console.log(`🔄 开始重试获取代币地址，交易哈希: ${txHash}`);
+
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    console.log(`尝试第 ${i + 1} 次...`);
+
+                    // 等待一段时间后重新获取交易回执
+                    await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1)));
+
+                    const receipt = await provider.getTransactionReceipt(txHash);
+                    if (!receipt) {
+                        console.log('交易回执不存在，继续重试...');
+                        continue;
+                    }
+
+                    console.log(`重试 ${i + 1}: 获取到交易回执`, receipt);
+
+                    // 使用相同的解析逻辑
+                    if (receipt.logs && receipt.logs.length > 0) {
+                        try {
+                            const iface = new ethers.utils.Interface(FACTORY_ABI);
+                            for (const log of receipt.logs) {
+                                try {
+                                    const parsedLog = iface.parseLog(log);
+                                    if (parsedLog.name === 'TokenCreated') {
+                                        const tokenAddress = parsedLog.args.token;
+                                        console.log(`✅ 重试成功！获取到代币地址: ${tokenAddress}`);
+                                        return tokenAddress;
+                                    }
+                                } catch (logError) {
+                                    // 忽略无法解析的日志
+                                }
+                            }
+                        } catch (error) {
+                            console.error(`重试 ${i + 1} 接口解析失败:`, error);
+                        }
+
+                        // 手动解析方法
+                        try {
+                            const tokenCreatedTopic = ethers.utils.id('TokenCreated(address,address,string,string)');
+                            for (const log of receipt.logs) {
+                                if (log.topics && log.topics[0] === tokenCreatedTopic && log.topics.length >= 3) {
+                                    const tokenAddress = ethers.utils.getAddress('0x' + log.topics[2].slice(26));
+                                    console.log(`✅ 重试手动解析成功！获取到代币地址: ${tokenAddress}`);
+                                    return tokenAddress;
+                                }
+                            }
+                        } catch (error) {
+                            console.error(`重试 ${i + 1} 手动解析失败:`, error);
+                        }
+                    }
+
+                } catch (error) {
+                    console.error(`重试 ${i + 1} 失败:`, error);
+                }
+            }
+
+            console.log('❌ 所有重试都失败了');
+            return null;
+        }
+
+        // 保存到历史记录
+        function saveToHistory(tokenData) {
+            const history = JSON.parse(localStorage.getItem('tokenHistory') || '[]');
+            history.unshift(tokenData);
+            localStorage.setItem('tokenHistory', JSON.stringify(history.slice(0, 10))); // 只保留最近10个
+        }
+
+        // 手动重试获取代币地址
+        let currentTxHash = null; // 存储当前交易哈希
+        let currentTokenData = null; // 存储当前代币数据
+
+        async function manualRetryAddress() {
+            if (!currentTxHash) {
+                showError('没有可重试的交易');
+                return;
+            }
+
+            console.log('🔄 用户手动重试获取代币地址');
+
+            // 禁用重试按钮
+            const retryBtn = document.getElementById('retryAddressBtn');
+            retryBtn.disabled = true;
+            retryBtn.textContent = '🔄 重试中...';
+
+            // 显示重试状态
+            updateStatus('🔄', '重试中', '正在重新获取代币地址...');
+
+            try {
+                const tokenAddress = await retryGetTokenAddress(currentTxHash, 5); // 增加重试次数
+
+                if (tokenAddress) {
+                    console.log(`✅ 手动重试成功！获取到代币地址: ${tokenAddress}`);
+
+                    // 更新UI
+                    document.getElementById('tokenAddress').textContent = `${tokenAddress.slice(0,10)}...${tokenAddress.slice(-8)}`;
+                    document.getElementById('tokenAddress').href = `${CONTRACT_CONFIG.BSCSCAN_BASE_URL}/address/${tokenAddress}`;
+
+                    // 隐藏重试按钮
+                    retryBtn.style.display = 'none';
+
+                    // 显示成功信息
+                    showSuccess(`
+                        <div style="text-align: left;">
+                            <div><strong>🎉 手动重试成功！</strong></div>
+                            <div style="margin-top: 8px;">
+                                <strong>代币地址:</strong><br>
+                                <a href="${CONTRACT_CONFIG.BSCSCAN_BASE_URL}/address/${tokenAddress}" target="_blank" style="color: #007bff; text-decoration: none;">
+                                    ${tokenAddress}
+                                </a>
+                            </div>
+                            <div style="margin-top: 8px;">
+                                <strong>交易哈希:</strong><br>
+                                <a href="${CONTRACT_CONFIG.BSCSCAN_BASE_URL}/tx/${currentTxHash}" target="_blank" style="color: #007bff; text-decoration: none;">
+                                    ${currentTxHash}
+                                </a>
+                            </div>
+                        </div>
+                    `);
+
+                    // 保存到历史记录
+                    if (currentTokenData) {
+                        saveToHistory({
+                            ...currentTokenData,
+                            tokenAddress,
+                            txHash: currentTxHash,
+                            timestamp: new Date().toISOString()
+                        });
+                    }
+
+                } else {
+                    console.error('❌ 手动重试也失败了');
+                    showError(`
+                        <div style="text-align: left;">
+                            <div><strong>❌ 重试失败</strong></div>
+                            <div style="margin-top: 8px;">
+                                多次尝试仍无法自动获取代币地址。<br>
+                                请手动在BSCScan中查看交易详情：
+                            </div>
+                            <div style="margin-top: 8px;">
+                                <a href="${CONTRACT_CONFIG.BSCSCAN_BASE_URL}/tx/${currentTxHash}" target="_blank" style="color: #007bff; text-decoration: none;">
+                                    查看交易详情 →
+                                </a>
+                            </div>
+                        </div>
+                    `);
+
+                    // 重新启用重试按钮
+                    retryBtn.disabled = false;
+                    retryBtn.textContent = '🔄 重试获取';
+                }
+
+            } catch (error) {
+                console.error('手动重试出错:', error);
+                showError(`重试失败: ${error.message}`);
+
+                // 重新启用重试按钮
+                retryBtn.disabled = false;
+                retryBtn.textContent = '🔄 重试获取';
+            }
+        }
+
+        // 显示帮助
+        function showHelp() {
+            document.getElementById('helpModal').style.display = 'flex';
+        }
+
+        // 关闭帮助
+        function closeHelp() {
+            document.getElementById('helpModal').style.display = 'none';
+        }
+
+        // 页面加载时初始化
+        window.addEventListener('load', function() {
+            console.log('📄 页面加载完成，开始初始化...');
+            init();
+        });
+
+        // DOM 内容加载完成时也尝试初始化（备用）
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('📄 DOM 内容加载完成');
+            // 延迟一点时间确保脚本加载
+            setTimeout(function() {
+                if (typeof ethers !== 'undefined' && !window.appInitialized) {
+                    console.log('📄 通过 DOMContentLoaded 初始化应用');
+                    window.appInitialized = true;
+                    init();
+                }
+            }, 500);
+        });
+
+        // 监听账户变化
+        if (window.ethereum) {
+            window.ethereum.on('accountsChanged', function (accounts) {
+                if (accounts.length === 0) {
+                    location.reload();
+                } else {
+                    connectWallet();
+                }
+            });
+
+            window.ethereum.on('chainChanged', function (chainId) {
+                location.reload();
+            });
+        }
+    </script>
+</body>
+</html>

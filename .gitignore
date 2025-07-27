@@ -1,0 +1,195 @@
+# ===================================
+# Vue.js + Hardhat 智能合约项目 .gitignore
+# ===================================
+
+# ===== Node.js 相关 =====
+# 依赖包目录
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# 包管理器锁定文件（可选择性忽略）
+# 注释掉下面的行如果你想提交锁定文件
+# package-lock.json
+# yarn.lock
+
+# ===== 环境配置文件 =====
+# 包含敏感信息的环境变量文件
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ===== Vue.js 构建产物 =====
+# 构建输出目录
+dist/
+build/
+
+# Vue CLI 缓存
+.cache/
+.parcel-cache/
+
+# ===== Hardhat/区块链开发相关 =====
+# Hardhat 编译产物和缓存
+artifacts/
+cache/
+typechain/
+typechain-types/
+
+# 合约部署记录（可能包含敏感信息）
+deployments/local/
+deployments/localhost/
+
+# 测试报告和日志
+test-reports/
+coverage/
+coverage.json
+.nyc_output/
+
+# ===== IDE 和编辑器文件 =====
+# Visual Studio Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ===== 操作系统生成的文件 =====
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ===== 日志文件 =====
+# 各种日志文件
+*.log
+logs/
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# ===== 临时文件和缓存 =====
+# 临时目录
+tmp/
+temp/
+.tmp/
+
+# 运行时数据
+lib-cov/
+coverage/
+.grunt/
+.lock-wscript
+
+# ===== 其他开发工具 =====
+# ESLint 缓存
+.eslintcache
+
+# Prettier 缓存
+.prettiercache
+
+# Stylelint 缓存
+.stylelintcache
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# ===== 安全相关 =====
+# 私钥文件
+*.pem
+*.key
+*.p12
+*.pfx
+
+# 证书文件
+*.crt
+*.cer
+
+# ===== 项目特定文件 =====
+# 本地配置文件
+config/local.js
+config/local.json
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
+# 备份文件
+*.bak
+*.backup
+*.old
+
+# 压缩文件
+*.zip
+*.tar.gz
+*.rar
+
+# ===== 可选：保留但不跟踪的文件 =====
+# 如果你想保留某些文件但不跟踪它们的变化，可以使用：
+# git update-index --skip-worktree <file>
+
+# ===== 注释说明 =====
+# 1. .env 文件包含敏感信息（私钥、API密钥等），绝对不能提交
+# 2. node_modules/ 体积巨大，应该通过 package.json 重新安装
+# 3. artifacts/ 和 cache/ 是 Hardhat 编译产物，可以重新生成
+# 4. test-reports/ 包含测试结果，每次运行都会重新生成
+# 5. dist/ 是构建产物，可以通过 npm run build 重新生成
