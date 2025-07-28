@@ -39,197 +39,320 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000000;
+            color: #ffffff;
             min-height: 100vh;
-            padding: 20px;
+            overflow-x: hidden;
         }
 
         .container {
-            max-width: 800px;
+            max-width: 428px;
             margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
+            background: #000000;
+            min-height: 100vh;
+            position: relative;
         }
 
-        .header {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
+        /* 顶部导航栏 */
+        .top-nav {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 15px;
+            justify-content: space-between;
+            padding: 12px 20px;
+            background: #000000;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid #1a1a1a;
         }
 
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
+        .back-btn {
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 8px;
         }
 
+        .nav-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .nav-spacer {
+            width: 34px;
+        }
+
+        /* 主要内容 */
         .main-content {
-            padding: 40px;
+            padding: 24px 20px;
         }
 
-        .status-card {
-            background: #f8f9fa;
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 30px;
-            border-left: 5px solid #28a745;
+        /* 主标题 */
+        .main-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #ffffff;
+            text-align: center;
+            margin-bottom: 32px;
+            line-height: 1.2;
+        }
+
+        .main-title .highlight {
+            color: #4A90E2;
+        }
+
+        /* 模式切换 */
+        .mode-switch {
             display: flex;
-            align-items: center;
-            gap: 20px;
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 32px;
+            max-width: 200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .mode-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            color: #888888;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .mode-btn.active {
+            background: #ffffff;
+            color: #000000;
+        }
+
+        /* Logo上传区域 */
+        .logo-upload {
+            background: #1a1a1a;
+            border: 2px dashed #333333;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 32px;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .logo-upload:hover {
+            border-color: #4A90E2;
+        }
+
+        .logo-upload-icon {
+            font-size: 48px;
+            color: #4A90E2;
+            margin-bottom: 12px;
+        }
+
+        .logo-upload-text {
+            color: #888888;
+            font-size: 14px;
+        }
+
+        .logo-upload-subtext {
+            color: #666666;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        /* 状态卡片 */
+        .status-card {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            border: 1px solid #333333;
         }
 
         .status-icon {
-            font-size: 3em;
+            display: none;
         }
 
         .status-text h3 {
-            color: #495057;
-            margin-bottom: 5px;
+            color: #ffffff;
+            margin-bottom: 8px;
+            font-size: 16px;
+            font-weight: 600;
         }
 
         .status-text p {
-            color: #6c757d;
+            color: #888888;
+            margin-bottom: 16px;
+            font-size: 14px;
         }
 
         .wallet-info {
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px solid #dee2e6;
+            background: #0a0a0a;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+            border: 1px solid #333333;
         }
 
         .wallet-info div {
             display: flex;
             justify-content: space-between;
             margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .wallet-info div:last-child {
+            margin-bottom: 0;
+        }
+
+        .wallet-info span:first-child {
+            color: #888888;
+        }
+
+        .wallet-info span:last-child {
+            color: #ffffff;
             font-family: monospace;
         }
 
         .connect-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #4A90E2 0%, #357ABD 100%);
             color: white;
             border: none;
             padding: 12px 24px;
-            border-radius: 25px;
+            border-radius: 8px;
+            font-weight: 600;
             cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
             transition: transform 0.2s;
+            font-size: 14px;
         }
 
         .connect-btn:hover {
-            transform: translateY(-2px);
+            transform: translateY(-1px);
         }
 
         .connect-btn:disabled {
-            background: #6c757d;
+            background: #333333;
             cursor: not-allowed;
             transform: none;
         }
 
+        /* 表单样式 */
         .form-card {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            border: 1px solid #e9ecef;
+            background: transparent;
+            border-radius: 0;
+            padding: 0;
+            box-shadow: none;
+            border: none;
         }
 
         .form-title {
-            color: #495057;
-            margin-bottom: 25px;
-            font-size: 1.5em;
-            text-align: center;
+            display: none;
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
 
         .form-group label {
             display: block;
             margin-bottom: 8px;
-            font-weight: bold;
-            color: #495057;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e9ecef;
-            border-radius: 10px;
+            font-weight: 600;
+            color: #ffffff;
             font-size: 16px;
-            transition: border-color 0.3s;
         }
 
-        .form-group input:focus {
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 16px;
+            background: #1a1a1a;
+            border: 1px solid #333333;
+            border-radius: 8px;
+            font-size: 16px;
+            color: #ffffff;
+            transition: border-color 0.3s;
+            font-family: inherit;
+            resize: vertical;
+        }
+
+        .form-group input::placeholder {
+            color: #666666;
+        }
+
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #4A90E2;
         }
 
         .form-group small {
-            color: #6c757d;
-            font-size: 0.9em;
-            margin-top: 5px;
+            color: #666666;
+            font-size: 12px;
+            margin-top: 4px;
             display: block;
+        }
+
+        /* 字符计数 */
+        .char-count {
+            color: #666666;
+            font-size: 12px;
+            text-align: right;
+            margin-top: 4px;
         }
 
         .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            gap: 16px;
         }
 
+        /* 模板选择 */
         .templates {
-            margin: 25px 0;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 10px;
+            margin: 24px 0;
+            padding: 0;
+            background: transparent;
+            border-radius: 0;
         }
 
         .templates h4 {
-            margin-bottom: 15px;
-            color: #495057;
+            margin-bottom: 16px;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 600;
         }
 
         .template-buttons {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
         }
 
         .template-btn {
-            background: white;
-            border: 2px solid #dee2e6;
-            padding: 8px 16px;
-            border-radius: 20px;
+            background: #1a1a1a;
+            border: 1px solid #333333;
+            padding: 8px 12px;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 12px;
+            color: #888888;
             transition: all 0.3s;
         }
 
-        .template-btn:hover {
-            border-color: #667eea;
-            background: #667eea;
+        .template-btn:hover, .template-btn.active {
+            border-color: #4A90E2;
+            background: #4A90E2;
             color: white;
         }
 
+        /* 费用信息隐藏 */
         .fee-info {
-            background: #e3f2fd;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px 0;
+            display: none;
         }
 
         .fee-item {
@@ -240,46 +363,56 @@
 
         .fee-item.total {
             font-weight: bold;
-            border-top: 1px solid #bbdefb;
+            border-top: 1px solid #333333;
             padding-top: 8px;
             margin-top: 8px;
         }
 
+        /* 创建按钮 */
         .create-btn {
             width: 100%;
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            background: linear-gradient(135deg, #4A90E2 0%, #357ABD 100%);
             color: white;
             border: none;
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 18px;
-            font-weight: bold;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
             transition: transform 0.2s;
+            margin-top: 32px;
         }
 
         .create-btn:hover {
-            transform: translateY(-2px);
+            transform: translateY(-1px);
         }
 
         .create-btn:disabled {
-            background: #6c757d;
+            background: #333333;
             cursor: not-allowed;
             transform: none;
         }
 
+        /* 交易卡片 */
         .transaction-card {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            margin-top: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 24px;
+            border: 1px solid #333333;
+        }
+
+        .transaction-card h3 {
+            color: #ffffff;
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: 600;
         }
 
         .transaction-status {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 30px;
+            margin-bottom: 24px;
         }
 
         .status-step {
@@ -290,70 +423,106 @@
         }
 
         .step-icon {
-            width: 40px;
-            height: 40px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
-            background: #dee2e6;
+            background: #333333;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #666666;
         }
 
         .status-step.active .step-icon {
-            background: #28a745;
+            background: #4A90E2;
             color: white;
         }
 
         .status-step.completed .step-icon {
-            background: #007bff;
+            background: #28a745;
             color: white;
         }
 
+        .step-text {
+            font-size: 12px;
+            color: #888888;
+            text-align: center;
+        }
+
+        .status-step.active .step-text,
+        .status-step.completed .step-text {
+            color: #ffffff;
+        }
+
         .transaction-details {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
+            background: #0a0a0a;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #333333;
         }
 
         .detail-item {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             align-items: center;
+            font-size: 14px;
+        }
+
+        .detail-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .detail-item span:first-child {
+            color: #888888;
+        }
+
+        .detail-item span:last-child {
+            color: #ffffff;
         }
 
         .detail-item a {
-            color: #007bff;
+            color: #4A90E2;
             text-decoration: none;
             font-family: monospace;
         }
 
+        /* 页脚 */
         .footer {
-            background: #343a40;
-            color: white;
-            padding: 20px;
+            background: #000000;
+            color: #666666;
+            padding: 24px 20px;
             text-align: center;
+            border-top: 1px solid #1a1a1a;
         }
 
         .footer a {
-            color: #adb5bd;
+            color: #888888;
             text-decoration: none;
-            margin: 0 10px;
+            margin: 0 8px;
+            font-size: 12px;
         }
 
         .footer a:hover {
-            color: white;
+            color: #4A90E2;
         }
 
+        .footer small {
+            font-size: 10px;
+            color: #666666;
+        }
+
+        /* 模态框 */
         .modal {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.8);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -361,13 +530,14 @@
         }
 
         .modal-content {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            max-width: 500px;
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 400px;
             width: 90%;
             max-height: 80vh;
             overflow-y: auto;
+            border: 1px solid #333333;
         }
 
         .modal-header {
@@ -377,41 +547,93 @@
             margin-bottom: 20px;
         }
 
+        .modal-header h3 {
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
         .modal-close {
             background: none;
             border: none;
             font-size: 24px;
             cursor: pointer;
-            color: #6c757d;
+            color: #888888;
+        }
+
+        .modal-body {
+            color: #ffffff;
         }
 
         .modal-body h4 {
-            color: #495057;
-            margin: 20px 0 10px 0;
+            color: #ffffff;
+            margin: 16px 0 8px 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .modal-body p {
+            color: #888888;
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 12px;
         }
 
         .modal-body ul {
-            margin-left: 20px;
+            margin-left: 16px;
+            color: #888888;
+            font-size: 14px;
         }
 
-        @media (max-width: 768px) {
+        .modal-body li {
+            margin-bottom: 4px;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 480px) {
+            .container {
+                max-width: 100%;
+            }
+
+            .main-content {
+                padding: 20px 16px;
+            }
+
             .form-row {
                 grid-template-columns: 1fr;
+                gap: 16px;
             }
-            
+
             .template-buttons {
                 flex-direction: column;
+                gap: 8px;
             }
-            
+
             .transaction-status {
                 flex-direction: column;
-                gap: 20px;
+                gap: 16px;
             }
+
+            .mode-switch {
+                max-width: 100%;
+            }
+        }
+
+        /* 隐藏原有的header */
+        .header {
+            display: none;
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- 顶部导航栏 -->
+        <div class="top-nav">
+            <button class="back-btn">←</button>
+            <div class="nav-title">RWAunion</div>
+            <div class="nav-spacer"></div>
+        </div>
+
         <!-- 头部 -->
         <div class="header">
             <h1>🪙 StagedToken 创建器</h1>
@@ -420,6 +642,23 @@
 
         <!-- 主要内容 -->
         <div class="main-content">
+            <!-- 主标题 -->
+            <h1 class="main-title">Launch your token<br>on <span class="highlight">RWAunion</span></h1>
+
+            <!-- 模式切换 -->
+            <div class="mode-switch">
+                <button class="mode-btn active">Simple</button>
+                <button class="mode-btn">Advanced</button>
+            </div>
+
+            <!-- Logo上传区域 -->
+            <div class="logo-upload" onclick="document.getElementById('logoInput').click()">
+                <div class="logo-upload-icon">📷</div>
+                <div class="logo-upload-text">JPEG/PNG/WEBP/GIF</div>
+                <div class="logo-upload-subtext">Less Than 4MB</div>
+                <input type="file" id="logoInput" accept="image/*" style="display: none;">
+            </div>
+
             <!-- 连接状态 -->
             <div class="status-card" id="statusCard">
                 <div class="status-icon" id="statusIcon">🔌</div>
@@ -445,39 +684,65 @@
                 <h2 class="form-title">创建新代币</h2>
                 <form class="token-form" id="tokenForm">
                     <div class="form-group">
-                        <label for="tokenName">代币名称</label>
-                        <input type="text" id="tokenName" placeholder="例如: My Awesome Token" required>
-                        <small>代币的完整名称</small>
+                        <label for="tokenName">* Token Name</label>
+                        <input type="text" id="tokenName" placeholder="Token name" required maxlength="20">
+                        <div class="char-count">0/20</div>
                     </div>
 
                     <div class="form-group">
-                        <label for="tokenSymbol">代币符号</label>
-                        <input type="text" id="tokenSymbol" placeholder="例如: MAT" required maxlength="10">
-                        <small>代币的简称，通常3-5个字符</small>
+                        <label for="tokenSymbol">* Token Symbol(Ticker)</label>
+                        <input type="text" id="tokenSymbol" placeholder="Token Symbol" required maxlength="10">
+                        <div class="char-count">0/10</div>
                     </div>
 
                     <div class="form-group">
-                        <label for="totalSupply">总供应量</label>
-                        <input type="number" id="totalSupply" placeholder="1000000" required min="1">
-                        <small>代币的总发行量</small>
+                        <label for="totalSupply">* Supply</label>
+                        <input type="number" id="totalSupply" placeholder="1000000000" required min="1">
                     </div>
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="buyFee">买入费用 (%)</label>
-                            <input type="number" id="buyFee" placeholder="2" min="0" max="10" step="0.1">
-                            <small>买入时收取的费用 (0-10%)</small>
-                        </div>
+                    <div class="form-group">
+                        <label for="tokenomicPreset">* Choose Tokenomic preset</label>
+                        <select id="tokenomicPreset" required>
+                            <option value="">Meme Category</option>
+                            <option value="meme">Meme Tax - 0.5% / 0.5%</option>
+                            <option value="standard">Standard - 1% / 3%</option>
+                            <option value="high">High Tax - 3% / 7%</option>
+                        </select>
+                    </div>
 
-                        <div class="form-group">
-                            <label for="sellFee">卖出费用 (%)</label>
-                            <input type="number" id="sellFee" placeholder="5" min="0" max="10" step="0.1">
-                            <small>卖出时收取的费用 (0-10%)</small>
+                    <div class="form-group">
+                        <label for="tokenDescription">* Token Description</label>
+                        <textarea id="tokenDescription" placeholder="Token Description" maxlength="256" rows="4"></textarea>
+                        <div class="char-count">0/256</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="website">Website</label>
+                        <input type="text" id="website" placeholder="Optional">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="telegram">Telegram</label>
+                        <input type="text" id="telegram" placeholder="@username or username">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="twitter">Twitter</label>
+                        <input type="text" id="twitter" placeholder="@username or username">
+                    </div>
+
+                    <!-- 备份资产 -->
+                    <div class="form-group">
+                        <label>Backing asset</label>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+                            <span style="color: #ff4444; font-size: 20px;">🔴</span>
+                            <span style="color: #ff4444; font-size: 14px;">TRX</span>
+                            <span style="color: #888888; font-size: 14px;">✓</span>
                         </div>
                     </div>
 
                     <!-- 预设模板 -->
-                    <div class="templates">
+                    <div class="templates" style="display: none;">
                         <h4>快速模板</h4>
                         <div class="template-buttons">
                             <button type="button" class="template-btn" data-template="standard">
@@ -509,7 +774,7 @@
                     </div>
 
                     <button type="submit" class="create-btn" id="createBtn">
-                        <span class="btn-text">创建代币</span>
+                        <span class="btn-text">Create token</span>
                         <span class="btn-loader" style="display: none;">⏳ 创建中...</span>
                     </button>
                 </form>
@@ -540,7 +805,6 @@
                     <div class="detail-item">
                         <span>代币地址:</span>
                         <a href="#" target="_blank" id="tokenAddress">-</a>
-                        <button id="retryAddressBtn" onclick="manualRetryAddress()" style="display: none; margin-left: 10px; padding: 4px 8px; font-size: 12px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">🔄 重试获取</button>
                     </div>
                     <div class="detail-item">
                         <span>Gas使用:</span>
@@ -791,15 +1055,17 @@
         // 应用模板
         function applyTemplate(event) {
             const template = event.target.dataset.template;
-            const templates = {
-                'standard': { buyFee: 1, sellFee: 3 },
-                'low-fee': { buyFee: 0.5, sellFee: 1 },
-                'high-fee': { buyFee: 3, sellFee: 7 }
+            const templateMapping = {
+                'standard': 'standard',
+                'low-fee': 'meme',  // 映射到meme预设 (0.5% / 0.5%)
+                'high-fee': 'high'  // 映射到high预设 (3% / 7%)
             };
 
-            if (templates[template]) {
-                document.getElementById('buyFee').value = templates[template].buyFee;
-                document.getElementById('sellFee').value = templates[template].sellFee;
+            if (templateMapping[template]) {
+                const tokenomicPreset = document.getElementById('tokenomicPreset');
+                if (tokenomicPreset) {
+                    tokenomicPreset.value = templateMapping[template];
+                }
             }
         }
 
@@ -811,8 +1077,23 @@
                 const name = document.getElementById('tokenName').value;
                 const symbol = document.getElementById('tokenSymbol').value;
                 const totalSupply = document.getElementById('totalSupply').value;
-                const buyFee = document.getElementById('buyFee').value || 0;
-                const sellFee = document.getElementById('sellFee').value || 0;
+
+                // 根据选择的预设获取费用
+                const tokenomicPreset = document.getElementById('tokenomicPreset').value;
+                let buyFee = 0;
+                let sellFee = 0;
+
+                // 根据预设设置费用
+                const feePresets = {
+                    'meme': { buyFee: 0.5, sellFee: 0.5 },
+                    'standard': { buyFee: 1, sellFee: 3 },
+                    'high': { buyFee: 3, sellFee: 7 }
+                };
+
+                if (tokenomicPreset && feePresets[tokenomicPreset]) {
+                    buyFee = feePresets[tokenomicPreset].buyFee;
+                    sellFee = feePresets[tokenomicPreset].sellFee;
+                }
 
                 if (!name || !symbol || !totalSupply) {
                     showError('请填写所有必填字段');
@@ -833,22 +1114,71 @@
                 const creationFee = await factory.creationFee();
 
                 // 创建代币
-                const tx = await factory.createToken(
+                // 智能费用转换 - 尝试多种格式直到找到合适的
+
+                async function tryCreateTokenWithDifferentFeeFormats(name, symbol, totalSupply, buyFeePercent, sellFeePercent, creationFee) {
+                    const conversionMethods = [
+                        { name: '直接百分比整数', factor: 1, description: '1% = 1', minValue: 1 },
+                        { name: '千分比', factor: 10, description: '1% = 10', minValue: 1 },
+                        { name: '基点', factor: 100, description: '1% = 100', minValue: 1 }
+                    ];
+
+                    for (const method of conversionMethods) {
+                        try {
+                            let buyFeeConverted = Math.floor(parseFloat(buyFeePercent) * method.factor);
+                            let sellFeeConverted = Math.floor(parseFloat(sellFeePercent) * method.factor);
+
+                            // 确保最小值，避免零费用
+                            if (buyFeeConverted === 0 && parseFloat(buyFeePercent) > 0) buyFeeConverted = method.minValue;
+                            if (sellFeeConverted === 0 && parseFloat(sellFeePercent) > 0) sellFeeConverted = method.minValue;
+
+                            console.log(`� 尝试 ${method.name}: ${buyFeePercent}% → ${buyFeeConverted}, ${sellFeePercent}% → ${sellFeeConverted}`);
+
+                            // 尝试估算gas来检查是否会被拒绝
+                            await factory.estimateGas.createToken(
+                                name,
+                                symbol,
+                                totalSupply,
+                                buyFeeConverted,
+                                sellFeeConverted,
+                                { value: creationFee }
+                            );
+
+                            console.log(`✅ ${method.name} 格式通过验证！`);
+
+                            // 如果gas估算成功，执行实际交易
+                            return await factory.createToken(
+                                name,
+                                symbol,
+                                totalSupply,
+                                buyFeeConverted,
+                                sellFeeConverted,
+                                { value: creationFee }
+                            );
+
+                        } catch (error) {
+                            console.log(`❌ ${method.name} 失败: ${error.message}`);
+                            continue;
+                        }
+                    }
+
+                    throw new Error('所有费用转换格式都失败了');
+                }
+
+                console.log(`💰 开始智能费用转换测试...`);
+
+                const tx = await tryCreateTokenWithDifferentFeeFormats(
                     name,
                     symbol,
                     totalSupply,
-                    Math.floor(parseFloat(buyFee) * 10) / 10,
-                    Math.floor(parseFloat(sellFee) * 10) / 10,
-                    { value: creationFee }
+                    buyFee,
+                    sellFee,
+                    creationFee
                 );
 
                 // 更新交易哈希
                 document.getElementById('txHash').textContent = `${tx.hash.slice(0,10)}...${tx.hash.slice(-8)}`;
                 document.getElementById('txHash').href = `${CONTRACT_CONFIG.BSCSCAN_BASE_URL}/tx/${tx.hash}`;
-
-                // 保存交易信息供重试使用
-                currentTxHash = tx.hash;
-                currentTokenData = { name, symbol, totalSupply, buyFee, sellFee };
 
                 updateTransactionStep(2);
 
@@ -969,102 +1299,38 @@
                     });
 
                 } else {
-                    console.error('❌ 初次解析失败，开始重试...');
+                    console.error('❌ 所有方法都无法获取代币地址');
                     console.log('交易回执详情:', JSON.stringify(receipt, null, 2));
 
-                    // 显示重试状态
-                    updateStatus('🔄', '重试中', '正在尝试重新获取代币地址...');
-
-                    // 尝试重试获取代币地址
-                    const retryTokenAddress = await retryGetTokenAddress(tx.hash);
-
-                    if (retryTokenAddress) {
-                        console.log(`✅ 重试成功！获取到代币地址: ${retryTokenAddress}`);
-
-                        // 更新UI
-                        document.getElementById('tokenAddress').textContent = `${retryTokenAddress.slice(0,10)}...${retryTokenAddress.slice(-8)}`;
-                        document.getElementById('tokenAddress').href = `${CONTRACT_CONFIG.BSCSCAN_BASE_URL}/address/${retryTokenAddress}`;
-                        document.getElementById('gasUsed').textContent = receipt.gasUsed.toString();
-
-                        updateTransactionStep(3);
-
-                        // 显示成功信息
-                        showSuccess(`
-                            <div style="text-align: left;">
-                                <div><strong>🎉 代币创建成功！(重试获取)</strong></div>
-                                <div style="margin-top: 8px;">
-                                    <strong>代币信息:</strong><br>
-                                    名称: ${name}<br>
-                                    符号: ${symbol}<br>
-                                    总供应量: ${totalSupply}<br>
-                                    买入手续费: ${buyFee}%<br>
-                                    卖出手续费: ${sellFee}%
-                                </div>
-                                <div style="margin-top: 8px;">
-                                    <strong>合约地址:</strong><br>
-                                    <a href="${CONTRACT_CONFIG.BSCSCAN_BASE_URL}/address/${retryTokenAddress}" target="_blank" style="color: #007bff; text-decoration: none;">
-                                        ${retryTokenAddress}
-                                    </a>
-                                </div>
-                                <div style="margin-top: 8px;">
-                                    <strong>交易哈希:</strong><br>
-                                    <a href="${CONTRACT_CONFIG.BSCSCAN_BASE_URL}/tx/${tx.hash}" target="_blank" style="color: #007bff; text-decoration: none;">
-                                        ${tx.hash}
-                                    </a>
-                                </div>
+                    // 提供更详细的错误信息和解决方案
+                    showError(`
+                        <div style="text-align: left;">
+                            <div><strong>⚠️ 代币创建成功，但无法自动获取地址</strong></div>
+                            <div style="margin-top: 8px;">
+                                交易已成功执行，但前端无法解析事件日志。<br>
+                                请通过以下方式查看代币信息：
                             </div>
-                        `);
-
-                        // 保存到历史记录
-                        saveToHistory({
-                            name, symbol, totalSupply, buyFee, sellFee,
-                            tokenAddress: retryTokenAddress, txHash: tx.hash,
-                            timestamp: new Date().toISOString()
-                        });
-
-                    } else {
-                        console.error('❌ 重试也失败了，显示手动查看指引');
-
-                        // 提供更详细的错误信息和解决方案
-                        showError(`
-                            <div style="text-align: left;">
-                                <div><strong>⚠️ 代币创建成功，但无法自动获取地址</strong></div>
-                                <div style="margin-top: 8px;">
-                                    交易已成功执行，但前端无法解析事件日志。<br>
-                                    <strong>已尝试多种解析方法和重试机制。</strong><br>
-                                    请通过以下方式查看代币信息：
-                                </div>
-                                <div style="margin-top: 8px;">
-                                    <strong>1. 查看交易详情:</strong><br>
-                                    <a href="${CONTRACT_CONFIG.BSCSCAN_BASE_URL}/tx/${tx.hash}" target="_blank" style="color: #007bff; text-decoration: none;">
-                                        ${tx.hash}
-                                    </a>
-                                </div>
-                                <div style="margin-top: 8px;">
-                                    <strong>2. 在BSCScan中:</strong><br>
-                                    • 点击上方交易链接<br>
-                                    • 查看 "To" 字段中的合约地址<br>
-                                    • 或在 "Logs" 标签页中找到TokenCreated事件<br>
-                                    • 代币地址在事件的第二个参数中
-                                </div>
-                                <div style="margin-top: 8px;">
-                                    <strong>3. 调试信息:</strong><br>
-                                    Gas使用量: ${receipt.gasUsed.toString()}<br>
-                                    日志数量: ${receipt.logs ? receipt.logs.length : 0}
-                                </div>
-                                <div style="margin-top: 8px; padding: 8px; background-color: #f8f9fa; border-radius: 4px; font-size: 12px;">
-                                    <strong>技术说明:</strong> 这通常是由于网络延迟或事件解析问题导致的。代币已成功创建，只是前端无法自动获取地址。
-                                </div>
+                            <div style="margin-top: 8px;">
+                                <strong>1. 查看交易详情:</strong><br>
+                                <a href="${CONTRACT_CONFIG.BSCSCAN_BASE_URL}/tx/${tx.hash}" target="_blank" style="color: #007bff; text-decoration: none;">
+                                    ${tx.hash}
+                                </a>
                             </div>
-                        `);
+                            <div style="margin-top: 8px;">
+                                <strong>2. 在BSCScan中:</strong><br>
+                                • 点击上方交易链接<br>
+                                • 查看 "To" 字段中的合约地址<br>
+                                • 或在 "Logs" 标签页中找到TokenCreated事件
+                            </div>
+                            <div style="margin-top: 8px;">
+                                <strong>Gas使用量:</strong> ${receipt.gasUsed.toString()}
+                            </div>
+                        </div>
+                    `);
 
-                        // 仍然更新交易步骤，显示部分信息
-                        document.getElementById('gasUsed').textContent = receipt.gasUsed.toString();
-                        updateTransactionStep(3);
-
-                        // 显示重试按钮
-                        document.getElementById('retryAddressBtn').style.display = 'inline-block';
-                    }
+                    // 仍然更新交易步骤，显示部分信息
+                    document.getElementById('gasUsed').textContent = receipt.gasUsed.toString();
+                    updateTransactionStep(3);
                 }
 
             } catch (error) {
@@ -1117,168 +1383,11 @@
             updateStatus('🎉', '成功', message);
         }
 
-        // 重试获取代币地址（备用方法）
-        async function retryGetTokenAddress(txHash, maxRetries = 3) {
-            console.log(`🔄 开始重试获取代币地址，交易哈希: ${txHash}`);
-
-            for (let i = 0; i < maxRetries; i++) {
-                try {
-                    console.log(`尝试第 ${i + 1} 次...`);
-
-                    // 等待一段时间后重新获取交易回执
-                    await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1)));
-
-                    const receipt = await provider.getTransactionReceipt(txHash);
-                    if (!receipt) {
-                        console.log('交易回执不存在，继续重试...');
-                        continue;
-                    }
-
-                    console.log(`重试 ${i + 1}: 获取到交易回执`, receipt);
-
-                    // 使用相同的解析逻辑
-                    if (receipt.logs && receipt.logs.length > 0) {
-                        try {
-                            const iface = new ethers.utils.Interface(FACTORY_ABI);
-                            for (const log of receipt.logs) {
-                                try {
-                                    const parsedLog = iface.parseLog(log);
-                                    if (parsedLog.name === 'TokenCreated') {
-                                        const tokenAddress = parsedLog.args.token;
-                                        console.log(`✅ 重试成功！获取到代币地址: ${tokenAddress}`);
-                                        return tokenAddress;
-                                    }
-                                } catch (logError) {
-                                    // 忽略无法解析的日志
-                                }
-                            }
-                        } catch (error) {
-                            console.error(`重试 ${i + 1} 接口解析失败:`, error);
-                        }
-
-                        // 手动解析方法
-                        try {
-                            const tokenCreatedTopic = ethers.utils.id('TokenCreated(address,address,string,string)');
-                            for (const log of receipt.logs) {
-                                if (log.topics && log.topics[0] === tokenCreatedTopic && log.topics.length >= 3) {
-                                    const tokenAddress = ethers.utils.getAddress('0x' + log.topics[2].slice(26));
-                                    console.log(`✅ 重试手动解析成功！获取到代币地址: ${tokenAddress}`);
-                                    return tokenAddress;
-                                }
-                            }
-                        } catch (error) {
-                            console.error(`重试 ${i + 1} 手动解析失败:`, error);
-                        }
-                    }
-
-                } catch (error) {
-                    console.error(`重试 ${i + 1} 失败:`, error);
-                }
-            }
-
-            console.log('❌ 所有重试都失败了');
-            return null;
-        }
-
         // 保存到历史记录
         function saveToHistory(tokenData) {
             const history = JSON.parse(localStorage.getItem('tokenHistory') || '[]');
             history.unshift(tokenData);
             localStorage.setItem('tokenHistory', JSON.stringify(history.slice(0, 10))); // 只保留最近10个
-        }
-
-        // 手动重试获取代币地址
-        let currentTxHash = null; // 存储当前交易哈希
-        let currentTokenData = null; // 存储当前代币数据
-
-        async function manualRetryAddress() {
-            if (!currentTxHash) {
-                showError('没有可重试的交易');
-                return;
-            }
-
-            console.log('🔄 用户手动重试获取代币地址');
-
-            // 禁用重试按钮
-            const retryBtn = document.getElementById('retryAddressBtn');
-            retryBtn.disabled = true;
-            retryBtn.textContent = '🔄 重试中...';
-
-            // 显示重试状态
-            updateStatus('🔄', '重试中', '正在重新获取代币地址...');
-
-            try {
-                const tokenAddress = await retryGetTokenAddress(currentTxHash, 5); // 增加重试次数
-
-                if (tokenAddress) {
-                    console.log(`✅ 手动重试成功！获取到代币地址: ${tokenAddress}`);
-
-                    // 更新UI
-                    document.getElementById('tokenAddress').textContent = `${tokenAddress.slice(0,10)}...${tokenAddress.slice(-8)}`;
-                    document.getElementById('tokenAddress').href = `${CONTRACT_CONFIG.BSCSCAN_BASE_URL}/address/${tokenAddress}`;
-
-                    // 隐藏重试按钮
-                    retryBtn.style.display = 'none';
-
-                    // 显示成功信息
-                    showSuccess(`
-                        <div style="text-align: left;">
-                            <div><strong>🎉 手动重试成功！</strong></div>
-                            <div style="margin-top: 8px;">
-                                <strong>代币地址:</strong><br>
-                                <a href="${CONTRACT_CONFIG.BSCSCAN_BASE_URL}/address/${tokenAddress}" target="_blank" style="color: #007bff; text-decoration: none;">
-                                    ${tokenAddress}
-                                </a>
-                            </div>
-                            <div style="margin-top: 8px;">
-                                <strong>交易哈希:</strong><br>
-                                <a href="${CONTRACT_CONFIG.BSCSCAN_BASE_URL}/tx/${currentTxHash}" target="_blank" style="color: #007bff; text-decoration: none;">
-                                    ${currentTxHash}
-                                </a>
-                            </div>
-                        </div>
-                    `);
-
-                    // 保存到历史记录
-                    if (currentTokenData) {
-                        saveToHistory({
-                            ...currentTokenData,
-                            tokenAddress,
-                            txHash: currentTxHash,
-                            timestamp: new Date().toISOString()
-                        });
-                    }
-
-                } else {
-                    console.error('❌ 手动重试也失败了');
-                    showError(`
-                        <div style="text-align: left;">
-                            <div><strong>❌ 重试失败</strong></div>
-                            <div style="margin-top: 8px;">
-                                多次尝试仍无法自动获取代币地址。<br>
-                                请手动在BSCScan中查看交易详情：
-                            </div>
-                            <div style="margin-top: 8px;">
-                                <a href="${CONTRACT_CONFIG.BSCSCAN_BASE_URL}/tx/${currentTxHash}" target="_blank" style="color: #007bff; text-decoration: none;">
-                                    查看交易详情 →
-                                </a>
-                            </div>
-                        </div>
-                    `);
-
-                    // 重新启用重试按钮
-                    retryBtn.disabled = false;
-                    retryBtn.textContent = '🔄 重试获取';
-                }
-
-            } catch (error) {
-                console.error('手动重试出错:', error);
-                showError(`重试失败: ${error.message}`);
-
-                // 重新启用重试按钮
-                retryBtn.disabled = false;
-                retryBtn.textContent = '🔄 重试获取';
-            }
         }
 
         // 显示帮助
@@ -1291,10 +1400,109 @@
             document.getElementById('helpModal').style.display = 'none';
         }
 
+        // 初始化字符计数功能
+        function initCharacterCount() {
+            // Token Name 字符计数
+            const tokenNameInput = document.getElementById('tokenName');
+            const tokenNameCount = tokenNameInput.parentElement.querySelector('.char-count');
+            tokenNameInput.addEventListener('input', function() {
+                const count = this.value.length;
+                tokenNameCount.textContent = `${count}/20`;
+            });
+
+            // Token Symbol 字符计数
+            const tokenSymbolInput = document.getElementById('tokenSymbol');
+            const tokenSymbolCount = tokenSymbolInput.parentElement.querySelector('.char-count');
+            tokenSymbolInput.addEventListener('input', function() {
+                const count = this.value.length;
+                tokenSymbolCount.textContent = `${count}/10`;
+            });
+
+            // Token Description 字符计数
+            const tokenDescInput = document.getElementById('tokenDescription');
+            const tokenDescCount = tokenDescInput.parentElement.querySelector('.char-count');
+            tokenDescInput.addEventListener('input', function() {
+                const count = this.value.length;
+                tokenDescCount.textContent = `${count}/256`;
+            });
+
+            // Twitter 用户名格式处理
+            const twitterInput = document.getElementById('twitter');
+            if (twitterInput) {
+                twitterInput.addEventListener('input', function() {
+                    let value = this.value.trim();
+                    // 移除多余的@符号和空格
+                    value = value.replace(/^@+/, '').replace(/\s+/g, '');
+                    // 只允许字母、数字和下划线
+                    value = value.replace(/[^a-zA-Z0-9_]/g, '');
+                    // 限制长度（Twitter用户名最长15个字符）
+                    if (value.length > 15) {
+                        value = value.substring(0, 15);
+                    }
+                    this.value = value;
+                });
+
+                // 失去焦点时自动添加@前缀（如果用户输入了内容）
+                twitterInput.addEventListener('blur', function() {
+                    if (this.value.trim() && !this.value.startsWith('@')) {
+                        this.value = '@' + this.value.trim();
+                    }
+                });
+
+                // 获得焦点时移除@前缀以便编辑
+                twitterInput.addEventListener('focus', function() {
+                    if (this.value.startsWith('@')) {
+                        this.value = this.value.substring(1);
+                    }
+                });
+            }
+
+            // Telegram 用户名格式处理
+            const telegramInput = document.getElementById('telegram');
+            if (telegramInput) {
+                telegramInput.addEventListener('input', function() {
+                    let value = this.value.trim();
+                    // 移除多余的@符号和空格
+                    value = value.replace(/^@+/, '').replace(/\s+/g, '');
+                    // 只允许字母、数字和下划线
+                    value = value.replace(/[^a-zA-Z0-9_]/g, '');
+                    // 限制长度（Telegram用户名最长32个字符）
+                    if (value.length > 32) {
+                        value = value.substring(0, 32);
+                    }
+                    this.value = value;
+                });
+
+                // 失去焦点时自动添加@前缀（如果用户输入了内容）
+                telegramInput.addEventListener('blur', function() {
+                    if (this.value.trim() && !this.value.startsWith('@')) {
+                        this.value = '@' + this.value.trim();
+                    }
+                });
+
+                // 获得焦点时移除@前缀以便编辑
+                telegramInput.addEventListener('focus', function() {
+                    if (this.value.startsWith('@')) {
+                        this.value = this.value.substring(1);
+                    }
+                });
+            }
+
+            // 模式切换功能
+            const modeBtns = document.querySelectorAll('.mode-btn');
+            modeBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    modeBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+        }
+
         // 页面加载时初始化
         window.addEventListener('load', function() {
             console.log('📄 页面加载完成，开始初始化...');
             init();
+            initCharacterCount();
         });
 
         // DOM 内容加载完成时也尝试初始化（备用）
