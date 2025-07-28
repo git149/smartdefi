@@ -1,3 +1,8 @@
+<img width="581" height="918" alt="image" src="https://github.com/user-attachments/assets/c595f1ca-3c41-4224-a069-e3fec34c2f02" />
+
+<img width="1910" height="900" alt="image" src="https://github.com/user-attachments/assets/ed99ede6-a34a-41ed-b2b6-fce9d2ceada3" />
+
+
 # synallage_exchange
 
 ## Project setup
