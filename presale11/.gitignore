@@ -1,0 +1,92 @@
+# 依赖文件
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# 环境变量文件
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 构建输出
+dist/
+build/
+out/
+
+# 缓存文件
+.cache/
+.parcel-cache/
+.nuxt/
+.next/
+
+# IDE和编辑器文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 日志文件
+logs/
+*.log
+
+# 临时文件
+tmp/
+temp/
+
+# 测试覆盖率
+coverage/
+.nyc_output/
+
+# 本地配置文件
+config.local.js
+settings.local.json
+
+# 钱包私钥和敏感信息
+*.pem
+*.key
+private/
+secrets/
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
+# 压缩文件
+*.zip
+*.tar.gz
+*.rar
+
+# Hardhat 相关文件
+.hardhat/
+artifacts/
+cache/
+typechain/
+typechain-types/
+
+# Vue.js 特定文件
+.vuepress/dist
+.serverless/
+.fusebox/
+.dynamodb/
+
+# 本地开发文件
+.local/
+
+# 其他
+.env.example
+.env.backup

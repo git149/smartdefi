@@ -1,0 +1,433 @@
+/**
+ *Submitted for verification at BscScan.com on 2024-06-03
+*/
+/这个是参考文件LEG
+
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.24;
+// optimize 200
+/// Standard IERC20 interface
+interface IERC20 {
+    function totalSupply() external view returns (uint256);
+    function decimals() external view returns (uint8);
+    function balanceOf(address user) external view returns (uint256);
+    function transfer(address recipient, uint256 amount) external returns (bool);
+    function allowance(address owner, address spender) external view returns (uint256);
+    function approve(address spender, uint256 amount) external returns (bool);
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+}
+
+interface Reader {
+    function isAdmin(address addy) external view returns (bool);
+    function superAdmin(address addy) external view returns (bool);
+    function isSetter(address addy) external view returns (bool);
+    function isProtocol(address addy) external view returns (bool);
+    function fegAddress() external view returns(address);
+    function sdDepAddy() external view returns (address);
+    function frontRun(address who, uint256 range, uint256 slip) external view returns(bool yes);
+    function setWhitelistContract(address addy, bool _bool) external;
+    function isWhitelistContract(address addy) external view returns(bool);
+    function breaker() external view returns (bool); //circuit breaked in case of an exploit to handle
+    function currentRouter() external view returns(address);
+    function wETH() external view returns(address);
+    function setExchangeSD(address SD, address LP, bool _bool) external;
+}
+
+interface sdep{
+    function sdOwner() external view returns(address);
+    function BackingLogicAddress() external view returns(address);
+    function backingAsset() external view returns(address);
+    function setLGE(address addy) external;
+    function endLGE() external;
+    function endLGE(address addy) external;
+    function setExemptUser(address user, bool adding) external;
+    function setWLOff(address token) external;
+    function liquifyForBacking(uint256 amt) external returns(uint tokenAmountOut);
+    function oneTokentoBacking(uint amt) external view returns(uint256);
+    function isSD(address token) external view returns(bool);
+}
+
+interface spre {
+    function setInitial(uint256 _supplyForLP, uint256 _devShare, uint256 _hardcap, uint256 _maxbuy, uint256 _startTime, uint256 _backingShare) external;
+    function setVesting(uint256 _vestingDelay, uint256 _vestingRate, address fp) external;
+    function dev() external view returns(address);
+    function fee(address user) external view returns(uint256);
+    function createLGE(address owner, address backing, address token) external returns(address SDP);
+}
+
+interface Dataport {
+    function DATA_READ() external view returns(address);
+}
+
+interface SD2 {
+    function sdOwner() external view returns(address);
+    function balanceOf(address account) external view returns(uint256);
+    function BackingLogicAddress() external view returns(address);
+    function uniswapV2Pair() external view returns(address);
+    function setLGE() external;
+    function LGE() external view returns(bool);
+    function LGEAddress() external view returns(address);
+    function aborted() external view returns(bool);
+    function raised() external view returns(uint256);
+}
+
+interface Swap {
+    function mint(address to) external returns (uint liquidity);
+    function burn(address to) external returns (uint amount0, uint amount1);
+    function swapExactTokensForTokensSupportingFeeOnTransferTokens(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline) external;
+    function deposit() external payable;
+    function withdraw(uint wad) external;
+    function getPair(address token0, address token1) external view returns(address);
+    function factory() external view returns(address);
+    function createPair(address tokenA, address tokenB) external returns (address pair);
+}
+
+library Address {
+    /**
+     * @dev Returns true if `account` is a contract.
+     *
+     * [IMPORTANT]
+     * ====
+     * It is unsafe to assume that an address for which this function returns
+     * false is an externally-owned account (EOA) and not a contract.
+     *
+     * Among others, `isContract` will return false for the following
+     * types of addresses:
+     *
+     *  - an externally-owned account
+     *  - a contract in construction
+     *  - an address where a contract will be created
+     *  - an address where a contract lived, but was destroyed
+     * ====
+     *
+     * [IMPORTANT]
+     * ====
+     * You shouldn't rely on `isContract` to protect against flash loan attacks!
+     *
+     * Preventing calls from contracts is highly discouraged. It breaks composability, breaks support for smart wallets
+     * like Gnosis Safe, and does not provide security since it can be circumvented by calling from a contract
+     * constructor.
+     * ====
+     */
+    function isContract(address account) internal view returns (bool) {
+        // This method relies on extcodesize/address.code.length, which returns 0
+        // for contracts in construction, since the code is only stored at the end
+        // of the constructor execution.
+
+        return account.code.length > 0;
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`], but with
+     * `errorMessage` as a fallback revert reason when `target` reverts.
+     *
+     * _Available since v3.1._
+     */
+    function functionCall(
+        address target,
+        bytes memory data,
+        string memory errorMessage
+    ) internal returns (bytes memory) {
+        return functionCallWithValue(target, data, 0, errorMessage);
+    }
+
+    /**
+     * @dev Same as {xref-Address-functionCallWithValue-address-bytes-uint256-}[`functionCallWithValue`], but
+     * with `errorMessage` as a fallback revert reason when `target` reverts.
+     *
+     * _Available since v3.1._
+     */
+    function functionCallWithValue(
+        address target,
+        bytes memory data,
+        uint256 value,
+        string memory errorMessage
+    ) internal returns (bytes memory) {
+        require(address(this).balance >= value, "Address: insuff");
+        (bool success, bytes memory returndata) = target.call{value: value}(data);
+        return verifyCallResultFromTarget(target, success, returndata, errorMessage);
+    }
+
+
+    /**
+     * @dev Tool to verify that a low level call to smart-contract was successful, and revert (either by bubbling
+     * the revert reason or using the provided one) in case of unsuccessful call or if target was not a contract.
+     *
+     * _Available since v4.8._
+     */
+    function verifyCallResultFromTarget(
+        address target,
+        bool success,
+        bytes memory returndata,
+        string memory errorMessage
+    ) internal view returns (bytes memory) {
+        if (success) {
+            if (returndata.length == 0) {
+                // only check isContract if the call was successful and the return data is empty
+                // otherwise we already know that it was a contract
+                require(isContract(target), "Address: call to non-contract");
+            }
+            return returndata;
+        } else {
+            _revert(returndata, errorMessage);
+        }
+    }
+
+    function _revert(bytes memory returndata, string memory errorMessage) private pure {
+        // Look for revert reason and bubble it up if present
+        if (returndata.length > 0) {
+            // The easiest way to bubble the revert reason is using memory via assembly
+            /// @solidity memory-safe-assembly
+            assembly {
+                let returndata_size := mload(returndata)
+                revert(add(32, returndata), returndata_size)
+            }
+        } else {
+            revert(errorMessage);
+        }
+    }
+}
+
+/// Transfer Helper to ensure the correct transfer of the tokens or ETH
+library SafeTransfer {
+    using Address for address;
+    /** Safe Transfer asset from one wallet with approval of the wallet
+    * @param erc20: the contract address of the erc20 token
+    * @param from: the wallet to take from
+    * @param amount: the amount to take from the wallet
+    **/
+    function _pullUnderlying(IERC20 erc20, address from, uint amount) internal
+    {
+        safeTransferFrom(erc20,from,address(this),amount);
+    }
+
+    function safeTransfer(
+        IERC20 token,
+        address to,
+        uint256 value
+    ) internal {
+        _callOptionalReturn(token, abi.encodeWithSelector(token.transfer.selector, to, value));
+    }
+
+    function safeTransferFrom(
+        IERC20 token,
+        address from,
+        address to,
+        uint256 value
+    ) internal {
+        _callOptionalReturn(token, abi.encodeWithSelector(token.transferFrom.selector, from, to, value));
+    }
+
+    /** Safe Transfer asset to one wallet from within the contract
+    * @param erc20: the contract address of the erc20 token
+    * @param to: the wallet to send to
+    * @param amount: the amount to send from the contract
+    **/
+    function _pushUnderlying(IERC20 erc20, address to, uint amount) internal
+    {
+        safeTransfer(erc20,to,amount);
+    }
+
+    /** Safe Transfer ETH to one wallet from within the contract
+    * @param to: the wallet to send to
+    * @param value: the amount to send from the contract
+    **/
+    function safeTransferETH(address to, uint256 value) internal {
+        (bool success,) = to.call{value : value}(new bytes(0));
+        require(success, 'TransferHelper::safeTransferETH: ETH transfer failed');
+    }
+
+    function _callOptionalReturn(IERC20 token, bytes memory data) private {
+        // We need to perform a low level call here, to bypass Solidity's return data size checking mechanism, since
+        // we're implementing it ourselves. We use {Address-functionCall} to perform this call, which verifies that
+        // the target address contains contract code and also asserts for success in the low-level call.
+
+        bytes memory returndata = address(token).functionCall(data, "SafeERC20: low");
+        if (returndata.length > 0) {
+            // Return data is optional
+            require(abi.decode(returndata, (bool)), "SafeERC20: ERC20 op");
+        }
+    }
+}
+
+contract SDLGEDeployer{
+    mapping(address => bool) public isLive; // bool to know if address was created here
+    mapping(address => address) public fegPair; // fegPair of token created during LGE
+    mapping(address => address) public tokenLGE; // LGE address of token
+    mapping(address => uint256) private fegShare; // share of LP raised for fegPair
+    address[] public allLGEs; // all LGE array
+    address[] public allFEGPairs; // all FEG pair array
+    address public LGEr = 0x0a508e87F09a04d7EE4968694230A222C5500BE2; // LGE logic address
+    uint256 public length = 0; // public function for number of LGE created
+    uint256 public _range = 0; // desired slippage range check 
+    uint256 public slip = 20; // desired slippage
+    uint256 private fee_ = 300; // 10 = 1% this is the fegPair share of raised LP
+    bool public paused; // creation of LGE paused if true
+    event Created(address token, address pair);
+    event reCreated(address token);
+
+    modifier set(){
+        address Dr = DATA_READ();
+        require(Reader(Dr).isAdmin(msg.sender) || Reader(Dr).isSetter(msg.sender), "NP");
+        _;
+    }
+
+    function UNISWAP_V2_ROUTER() public view returns(address) {
+        return Reader(DATA_READ()).currentRouter();
+    }
+
+    // desired slippage input for frontrun protection
+    function setRange(uint256 range_, uint256 _slip) external {
+        require(Reader(DATA_READ()).superAdmin(msg.sender), "admin");
+        require(_range < 100, "100");
+        require(_slip > 2 && _slip < 31, "3-30");
+        _range = range_;
+        slip = _slip;
+    }
+
+    // view fegPair share of LP
+    function fee(address user) public view returns(uint256) {
+        return fegShare[user];
+    }
+
+    function DATA_READ() public view returns(address) {
+       return Dataport(0xcCeD1a96321B2B2a06E8F3F4B0B883dDD059968c).DATA_READ();
+    }
+
+    // set minimum share of fegPair
+    function setFee(uint256 _fee) external {
+        require(Reader(DATA_READ()).superAdmin(msg.sender), "admin");
+        require(_fee <= 500, "500");
+        fee_ = _fee;
+    }
+
+    // set LGE logic address
+    function setLGEr(address addy) external {
+        require(Reader(DATA_READ()).superAdmin(msg.sender), "admin");
+        LGEr = addy;
+    }
+
+    // pause creation of LGE
+    function pause(bool _bool) external set {
+        paused = _bool;
+    }
+
+    // allow for setting isLive for token incase any errors ever happen
+    function toggleLive(address token, bool _bool) external set {
+        isLive[token] = _bool;
+    }
+
+    function range() external view returns(uint256,uint256) {
+        return (_range, slip);
+    }
+
+    // check if front run has happened
+    function frontRun(address who, uint256 range_, uint256 _slip) public view returns(bool yes) {
+        address a = Reader(DATA_READ()).sdDepAddy();
+        yes = Reader(a).frontRun(who, range_, _slip);
+    }
+
+    // function for LGE to turn off whitelist after completion
+    function setWLOff(address token, bool _bool) external {
+        require(tokenLGE[token] == msg.sender);
+        address a = DATA_READ();
+        require(sdep(a).isSD(token));
+        Reader(a).setWhitelistContract(msg.sender, _bool);  
+    }
+    
+    // end the LGE, only called from the LGE
+    function endLGE(address token) external {
+        require(tokenLGE[token] == msg.sender);
+        address a = DATA_READ();
+        sdep(token).endLGE();
+        Reader(a).setExchangeSD(token, fegPair[token], true);
+        Reader(a).setExchangeSD(FEG(), fegPair[token], true);
+    }
+
+    function FEG() public view returns(address) {
+        return Reader(DATA_READ()).fegAddress();
+    }
+
+    function wETH() public view returns(address) {
+        return Reader(DATA_READ()).wETH();
+    }
+
+    function admin(bytes memory data) external {
+        address to = FEG();
+        require(Reader(DATA_READ()).superAdmin(msg.sender));
+        (bool success, ) = to.call{value: 0}(data);
+        require(success, "tx failed");
+    }
+
+    /*
+    * Creates the LGE for the SmartDeFi token
+    * @param token: SD token address.
+    * @param _supplyForLP: Amount of total supply towards LP.
+    * @param _devShare: Amount of vested LP for the developer.
+    * @param _rate: Amount of tokens per BNB, this is also the starting price of pair.
+    * @param _maxBuy: Max amount per wallet.
+    * @param _startTime: Start time of LGE must be at least 15 minutes from now.
+    * @param _vestingDelay: Delay of time inbetween vestingRate release. Minimum 7 days and maximum 90 days.
+    * @param _vestingRate: Amount of initial LP released on the _vestingDelay. Minimum 5 and maximum 20, 5 = 5% of initial vested LP.
+    * @param _backingShare: Amount of raise allocated for token asset backing, this is subtracted from the total raised and remaining balance goes towards LP. Minimum 1 and maximum 50.
+    * @param _fegShare: Amount of rasised - _backingShare allocated for fegPair, minimum 300(30%) maximum 1000(100%).
+    */
+    function createLGE(address owner, address token, uint256 _supplyForLP, uint256 _devShare, uint256 _hardcap, uint256 _maxbuy, uint256 _startTime, uint256 _vestingDelay, uint256 _vestingRate, uint256 _backingShare, uint256 _fegShare) external returns (address SDP) {
+        require(!paused, "pause");uint256 vr = _vestingRate;
+        require(SD2(token).sdOwner() == msg.sender || Reader(DATA_READ()).isProtocol(msg.sender), "owner");
+        require(_vestingDelay <= 90 && _vestingDelay >= 7, "90/7");
+        require(_vestingRate <= 20 && _vestingRate >= 5, "20/5");
+        require(_devShare <= 50, "50");
+        require(_startTime >= block.timestamp + 15 minutes, "start later");
+        require(_backingShare <= 50, "1-50");
+        require(_fegShare <= 700 &&_fegShare >= fee_, "100/30");
+        require(_supplyForLP <= IERC20(token).totalSupply() && _supplyForLP >= IERC20(token).totalSupply() * 10 / 100 && _supplyForLP <= (type(uint128).max - 1), "100% supply max, 10% supply min");
+        require(IERC20(token).balanceOf(SD2(token).uniswapV2Pair()) == 0, "Balance must be 0");
+        address fp = Swap(Swap(UNISWAP_V2_ROUTER()).factory()).getPair(token, FEG());
+        uint256 vd = _vestingDelay;
+        address o = owner;
+        address t = token;
+        uint256 s = _supplyForLP;
+        if(fp == address(0)) {
+        fp = Swap(Swap(UNISWAP_V2_ROUTER()).factory()).createPair(t, FEG());
+        sdep(t).setExemptUser(fp, true);
+        }
+        if(fp != address(0)) {
+        require(IERC20(t).balanceOf(fp) == 0, "Must be 0");
+        }
+        if(SD2(t).LGEAddress() != address(0)) {
+        require(it(t), "not A/R/L");
+        emit reCreated(t);
+        }
+        SDP = spre(LGEr).createLGE(o, sdep(t).backingAsset(), t);
+        if(sdep(t).backingAsset() == t) {
+        require (_backingShare == 0, "must be 0");
+        }
+        if(sdep(DATA_READ()).isSD(sdep(t).backingAsset())) {
+        sdep(sdep(t).backingAsset()).setExemptUser(SDP, true);
+        }
+        fegShare[SDP] = _fegShare;
+        sdep(t).setLGE(SDP);  
+        Reader(DATA_READ()).setWhitelistContract(SDP, true);  
+        SafeTransfer.safeTransferFrom(IERC20(t), msg.sender, SDP, s); uint256 ds = _devShare; uint256 hc = _hardcap; uint256 mb = _maxbuy; uint256 st = _startTime; uint256 bs = _backingShare;
+        spre(SDP).setInitial(s, ds, hc, mb, st, bs);
+        spre(SDP).setVesting(vd, vr, fp);
+        allLGEs.push(SDP);
+        fegPair[t] = fp;
+        allFEGPairs.push(fp);
+        length += 1;
+        isLive[t] = true;
+        tokenLGE[t] = SDP;
+        emit Created(t, SDP);
+        return SDP;
+    }
+
+    function it(address token) internal view returns(bool b){
+        address a = SD2(token).LGEAddress(); // would pass from create but stack to deep will occur
+        if(SD2(a).aborted()) {
+            b = true;
+        }
+    }
+}
