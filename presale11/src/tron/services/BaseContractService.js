@@ -110,7 +110,7 @@ class BaseContractService {
   async callMethod(methodName, params = [], options = {}) {
     try {
       await this.ensureInitialized()
-
+      
       console.log(`📞 调用${this.contractType}合约方法:`, methodName, params)
 
       const method = this.contract[methodName]

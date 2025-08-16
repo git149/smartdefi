@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRON Nile测试链 - 代币预售对查询测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .result-box {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            border-left: 4px solid;
+        }
+        .success { background: #d5f4e6; border-color: #27ae60; }
+        .error { background: #fadbd8; border-color: #e74c3c; }
+        .info { background: #ecf0f1; border-color: #3498db; }
+        .warning { background: #fef9e7; border-color: #f39c12; }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover { background: #2980b9; }
+        button:disabled { background: #bdc3c7; cursor: not-allowed; }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .address {
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        .token-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+        .token-header {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        .token-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 12px;
+        }
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #7f8c8d;
+        }
+        .detail-value {
+            color: #2c3e50;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #3498db;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 TRON Nile测试链 - 代币预售对查询测试</h1>
+        
+        <div class="info result-box">
+            <h3>📋 测试信息</h3>
+            <p><strong>网络:</strong> TRON Nile测试网</p>
+            <p><strong>工厂合约:</strong> <span class="address">TTMTNpZPeaxV9aT3mDuhMT7t6Suu1NtMrc</span></p>
+            <p><strong>创建者地址:</strong> <span class="address">TK57586sko7cTQxgNUGqpzMGWTwWBsr6iu</span></p>
+        </div>
+
+        <div>
+            <button onclick="connectTronLink()">连接TronLink</button>
+            <button onclick="testBasicContract()">测试合约连接</button>
+            <button onclick="testCreatorTokenCount()">测试创建者代币数量</button>
+            <button onclick="testGetTokenPresalePairs()">测试代币预售对查询</button>
+            <button onclick="testAllTokens()">测试所有代币查询</button>
+            <button onclick="runFullTest()">运行完整测试</button>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/tronweb@5.3.0/dist/TronWeb.js"></script>
+    <script>
+        // 配置
+        const CONFIG = {
+            FACTORY_ADDRESS: 'TTMTNpZPeaxV9aT3mDuhMT7t6Suu1NtMrc',
+            CREATOR_ADDRESS: 'TK57586sko7cTQxgNUGqpzMGWTwWBsr6iu',
+            NILE_NETWORK: {
+                fullHost: 'https://nile.trongrid.io',
+                solidityNode: 'https://nile.trongrid.io',
+                eventServer: 'https://nile.trongrid.io'
+            }
+        };
+
+        // CoordinatorFactory ABI (简化版，包含主要查询方法)
+        const FACTORY_ABI = [
+            {
+                "inputs": [
+                    {"internalType": "address", "name": "creator", "type": "address"},
+                    {"internalType": "uint256", "name": "offset", "type": "uint256"},
+                    {"internalType": "uint256", "name": "limit", "type": "uint256"}
+                ],
+                "name": "getTokenPresalePairsByCreator",
+                "outputs": [
+                    {
+                        "components": [
+                            {"internalType": "address", "name": "tokenAddress", "type": "address"},
+                            {"internalType": "address", "name": "presaleAddress", "type": "address"},
+                            {"internalType": "address", "name": "creator", "type": "address"},
+                            {"internalType": "uint256", "name": "createdAt", "type": "uint256"},
+                            {"internalType": "string", "name": "tokenName", "type": "string"},
+                            {"internalType": "string", "name": "tokenSymbol", "type": "string"},
+                            {"internalType": "uint256", "name": "totalSupply", "type": "uint256"}
+                        ],
+                        "internalType": "struct CoordinatorFactory.TokenPresalePair[]",
+                        "name": "pairs",
+                        "type": "tuple[]"
+                    },
+                    {"internalType": "uint256", "name": "total", "type": "uint256"}
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [{"internalType": "address", "name": "creator", "type": "address"}],
+                "name": "getCreatorTokenCount",
+                "outputs": [{"internalType": "uint256", "name": "count", "type": "uint256"}],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {"internalType": "uint256", "name": "offset", "type": "uint256"},
+                    {"internalType": "uint256", "name": "limit", "type": "uint256"}
+                ],
+                "name": "getAllTokenPresalePairs",
+                "outputs": [
+                    {
+                        "components": [
+                            {"internalType": "address", "name": "tokenAddress", "type": "address"},
+                            {"internalType": "address", "name": "presaleAddress", "type": "address"},
+                            {"internalType": "address", "name": "creator", "type": "address"},
+                            {"internalType": "uint256", "name": "createdAt", "type": "uint256"},
+                            {"internalType": "string", "name": "tokenName", "type": "string"},
+                            {"internalType": "string", "name": "tokenSymbol", "type": "string"},
+                            {"internalType": "uint256", "name": "totalSupply", "type": "uint256"}
+                        ],
+                        "internalType": "struct CoordinatorFactory.TokenPresalePair[]",
+                        "name": "pairs",
+                        "type": "tuple[]"
+                    },
+                    {"internalType": "uint256", "name": "total", "type": "uint256"}
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "totalPairsCreated",
+                "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "factoryEnabled",
+                "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+                "stateMutability": "view",
+                "type": "function"
+            }
+        ];
+
+        let tronWeb;
+        let contract;
+
+        // 显示结果
+        function showResult(content, type = 'info') {
+            const resultsDiv = document.getElementById('results');
+            const resultBox = document.createElement('div');
+            resultBox.className = `result-box ${type}`;
+            resultBox.innerHTML = content;
+            resultsDiv.appendChild(resultBox);
+        }
+
+        // 清空结果
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        // 格式化地址显示
+        function formatAddress(address) {
+            if (!address) return 'N/A';
+            return `${address.slice(0, 6)}...${address.slice(-4)}`;
+        }
+
+        // 格式化时间戳
+        function formatTimestamp(timestamp) {
+            if (!timestamp) return 'N/A';
+            return new Date(Number(timestamp) * 1000).toLocaleString();
+        }
+
+        // 连接TronLink
+        async function connectTronLink() {
+            try {
+                clearResults();
+                showResult('<div class="loading"></div>正在连接TronLink...', 'info');
+
+                if (typeof window.tronWeb === 'undefined') {
+                    throw new Error('请安装TronLink钱包');
+                }
+
+                // 请求账户访问
+                await window.tronWeb.request({ method: 'tron_requestAccounts' });
+                
+                tronWeb = window.tronWeb;
+                contract = await tronWeb.contract(FACTORY_ABI, CONFIG.FACTORY_ADDRESS);
+
+                // 检查网络
+                const nodeInfo = await tronWeb.trx.getNodeInfo();
+                const isNile = nodeInfo.configNodeInfo.includes('nile');
+
+                clearResults();
+                showResult(`
+                    <h3>✅ TronLink连接成功</h3>
+                    <p><strong>账户:</strong> <span class="address">${tronWeb.defaultAddress.base58}</span></p>
+                    <p><strong>网络:</strong> ${isNile ? 'Nile测试网' : '其他网络'}</p>
+                    <p><strong>节点信息:</strong> ${nodeInfo.configNodeInfo}</p>
+                `, 'success');
+
+            } catch (error) {
+                clearResults();
+                showResult(`
+                    <h3>❌ TronLink连接失败</h3>
+                    <p><strong>错误:</strong> ${error.message}</p>
+                `, 'error');
+            }
+        }
+
+        // 测试合约连接
+        async function testBasicContract() {
+            try {
+                if (!contract) {
+                    await connectTronLink();
+                    if (!contract) return;
+                }
+
+                showResult('<div class="loading"></div>正在测试合约连接...', 'info');
+
+                // 测试基本合约调用
+                const [totalPairs, factoryEnabled] = await Promise.all([
+                    contract.totalPairsCreated().call(),
+                    contract.factoryEnabled().call()
+                ]);
+
+                clearResults();
+                showResult(`
+                    <h3>✅ 合约连接测试成功</h3>
+                    <div class="stats">
+                        <div class="stat-card">
+                            <div class="stat-number">${totalPairs.toString()}</div>
+                            <div class="stat-label">总创建数量</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">${factoryEnabled ? '启用' : '禁用'}</div>
+                            <div class="stat-label">工厂状态</div>
+                        </div>
+                    </div>
+                `, 'success');
+
+            } catch (error) {
+                clearResults();
+                showResult(`
+                    <h3>❌ 合约连接测试失败</h3>
+                    <p><strong>错误:</strong> ${error.message}</p>
+                `, 'error');
+            }
+        }
+
+        // 测试创建者代币数量
+        async function testCreatorTokenCount() {
+            try {
+                if (!contract) {
+                    await connectTronLink();
+                    if (!contract) return;
+                }
+
+                showResult('<div class="loading"></div>正在查询创建者代币数量...', 'info');
+
+                const creatorCount = await contract.getCreatorTokenCount(CONFIG.CREATOR_ADDRESS).call();
+
+                clearResults();
+                showResult(`
+                    <h3>📊 创建者代币数量查询结果</h3>
+                    <div class="stats">
+                        <div class="stat-card">
+                            <div class="stat-number">${creatorCount.toString()}</div>
+                            <div class="stat-label">代币数量</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">${CONFIG.CREATOR_ADDRESS}</div>
+                            <div class="stat-label">创建者地址</div>
+                        </div>
+                    </div>
+                    <p><strong>创建者地址:</strong> <span class="address">${CONFIG.CREATOR_ADDRESS}</span></p>
+                    <p><strong>代币数量:</strong> ${creatorCount.toString()}</p>
+                `, creatorCount.toString() === '0' ? 'warning' : 'success');
+
+            } catch (error) {
+                clearResults();
+                showResult(`
+                    <h3>❌ 创建者代币数量查询失败</h3>
+                    <p><strong>错误:</strong> ${error.message}</p>
+                `, 'error');
+            }
+        }
+
+        // 测试代币预售对查询
+        async function testGetTokenPresalePairs() {
+            try {
+                if (!contract) {
+                    await connectTronLink();
+                    if (!contract) return;
+                }
+
+                showResult('<div class="loading"></div>正在查询代币预售对...', 'info');
+
+                const result = await contract.getTokenPresalePairsByCreator(
+                    CONFIG.CREATOR_ADDRESS,
+                    0,  // offset
+                    50  // limit
+                ).call();
+
+                clearResults();
+                
+                if (result.pairs && result.pairs.length > 0) {
+                    let tokensHtml = '';
+                    
+                    result.pairs.forEach((pair, index) => {
+                        tokensHtml += `
+                            <div class="token-item">
+                                <div class="token-header">
+                                    ${index + 1}. ${pair.tokenSymbol} (${pair.tokenName})
+                                </div>
+                                <div class="token-details">
+                                    <div class="detail-item">
+                                        <span class="detail-label">代币地址:</span>
+                                        <span class="detail-value address">${formatAddress(pair.tokenAddress)}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">预售地址:</span>
+                                        <span class="detail-value address">${formatAddress(pair.presaleAddress)}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">创建者:</span>
+                                        <span class="detail-value address">${formatAddress(pair.creator)}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">创建时间:</span>
+                                        <span class="detail-value">${formatTimestamp(pair.createdAt)}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">总供应量:</span>
+                                        <span class="detail-value">${pair.totalSupply.toString()}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">TRONScan:</span>
+                                        <span class="detail-value">
+                                            <a href="https://nile.tronscan.org/#/address/${pair.tokenAddress}" target="_blank">代币</a> | 
+                                            <a href="https://nile.tronscan.org/#/address/${pair.presaleAddress}" target="_blank">预售</a>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    showResult(`
+                        <h3>✅ 代币预售对查询成功</h3>
+                        <div class="stats">
+                            <div class="stat-card">
+                                <div class="stat-number">${result.pairs.length}</div>
+                                <div class="stat-label">查询到代币数量</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">${result.total.toString()}</div>
+                                <div class="stat-label">总代币数量</div>
+                            </div>
+                        </div>
+                        <h4>📋 代币列表:</h4>
+                        ${tokensHtml}
+                    `, 'success');
+
+                } else {
+                    showResult(`
+                        <h3>⚠️ 未找到代币预售对</h3>
+                        <p><strong>创建者地址:</strong> <span class="address">${CONFIG.CREATOR_ADDRESS}</span></p>
+                        <p><strong>查询结果:</strong> 该地址没有创建过代币预售对</p>
+                    `, 'warning');
+                }
+
+            } catch (error) {
+                clearResults();
+                showResult(`
+                    <h3>❌ 代币预售对查询失败</h3>
+                    <p><strong>错误:</strong> ${error.message}</p>
+                `, 'error');
+            }
+        }
+
+        // 测试所有代币查询
+        async function testAllTokens() {
+            try {
+                if (!contract) {
+                    await connectTronLink();
+                    if (!contract) return;
+                }
+
+                showResult('<div class="loading"></div>正在查询所有代币...', 'info');
+
+                const result = await contract.getAllTokenPresalePairs(0, 50).call();
+
+                // 筛选指定创建者的代币
+                const creatorTokens = result.pairs.filter(pair => 
+                    pair.creator.toLowerCase() === CONFIG.CREATOR_ADDRESS.toLowerCase()
+                );
+
+                clearResults();
+                
+                if (creatorTokens.length > 0) {
+                    let tokensHtml = '';
+                    
+                    creatorTokens.forEach((pair, index) => {
+                        tokensHtml += `
+                            <div class="token-item">
+                                <div class="token-header">
+                                    ${index + 1}. ${pair.tokenSymbol} (${pair.tokenName})
+                                </div>
+                                <div class="token-details">
+                                    <div class="detail-item">
+                                        <span class="detail-label">代币地址:</span>
+                                        <span class="detail-value address">${formatAddress(pair.tokenAddress)}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">预售地址:</span>
+                                        <span class="detail-value address">${formatAddress(pair.presaleAddress)}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">创建时间:</span>
+                                        <span class="detail-value">${formatTimestamp(pair.createdAt)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    showResult(`
+                        <h3>✅ 所有代币查询成功</h3>
+                        <div class="stats">
+                            <div class="stat-card">
+                                <div class="stat-number">${creatorTokens.length}</div>
+                                <div class="stat-label">创建者代币数量</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">${result.total.toString()}</div>
+                                <div class="stat-label">全网代币总数</div>
+                            </div>
+                        </div>
+                        <h4>📋 创建者的代币:</h4>
+                        ${tokensHtml}
+                    `, 'success');
+
+                } else {
+                    showResult(`
+                        <h3>⚠️ 在所有代币中未找到创建者的代币</h3>
+                        <p><strong>创建者地址:</strong> <span class="address">${CONFIG.CREATOR_ADDRESS}</span></p>
+                        <p><strong>全网代币总数:</strong> ${result.total.toString()}</p>
+                        <p><strong>查询范围:</strong> 前50个代币</p>
+                    `, 'warning');
+                }
+
+            } catch (error) {
+                clearResults();
+                showResult(`
+                    <h3>❌ 所有代币查询失败</h3>
+                    <p><strong>错误:</strong> ${error.message}</p>
+                `, 'error');
+            }
+        }
+
+        // 运行完整测试
+        async function runFullTest() {
+            try {
+                clearResults();
+                showResult('<div class="loading"></div>正在运行完整测试...', 'info');
+
+                // 1. 连接TronLink
+                await connectTronLink();
+                if (!contract) return;
+
+                // 2. 测试合约连接
+                await testBasicContract();
+
+                // 3. 测试创建者代币数量
+                await testCreatorTokenCount();
+
+                // 4. 测试代币预售对查询
+                await testGetTokenPresalePairs();
+
+                // 5. 测试所有代币查询
+                await testAllTokens();
+
+                showResult(`
+                    <h3>🎉 完整测试完成</h3>
+                    <p>所有测试项目已执行完毕，请查看上方结果。</p>
+                `, 'success');
+
+            } catch (error) {
+                showResult(`
+                    <h3>❌ 完整测试失败</h3>
+                    <p><strong>错误:</strong> ${error.message}</p>
+                `, 'error');
+            }
+        }
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            showResult(`
+                <h3>📋 测试说明</h3>
+                <p>这个测试页面用于验证在TRON Nile测试链上查询代币预售对的功能。</p>
+                <p><strong>测试目标:</strong> 验证地址 <span class="address">${CONFIG.CREATOR_ADDRESS}</span> 创建的代币预售对</p>
+                <p><strong>测试步骤:</strong></p>
+                <ol>
+                    <li>连接TronLink钱包</li>
+                    <li>测试合约连接</li>
+                    <li>查询创建者代币数量</li>
+                    <li>查询代币预售对详情</li>
+                    <li>验证查询结果</li>
+                </ol>
+                <p><strong>注意:</strong> 请确保TronLink连接到Nile测试网</p>
+            `, 'info');
+        });
+    </script>
+</body>
+</html>

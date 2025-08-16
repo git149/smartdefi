@@ -63,6 +63,7 @@ export default [
  
     {
         path: '/token-detail/:id?', name: 'tokenDetail',
-        component: resolve => require(['../mobilePages/TokenDetailPage.vue'], resolve)
+        component: resolve => require(['../mobilePages/TokenDetailPage.vue'], resolve),
+        props: true
     }
 ]
