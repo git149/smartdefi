@@ -684,6 +684,142 @@ class PresaleService extends BaseContractService {
     }
     return '暂时无法解锁'
   }
+
+  // ==================== 预售配置信息获取方法 ====================
+
+  /**
+   * 获取 LGE 配置信息
+   * @returns {Promise<Object>} LGE 配置
+   */
+  async getLGEConfig() {
+    try {
+      console.log('🔍 获取 LGE 配置...')
+      const result = await this.callMethod('getLGEConfig')
+
+      return {
+        vestingDelay: result.vestingDelay_ || result[0],
+        vestingRate: result.vestingRate_ || result[1],
+        vestingEnabled: result.vestingEnabled_ || result[2],
+        backingShare: result.backingShare_ || result[3],
+        backingReceiver: result.backingReceiver_ || result[4],
+        startTime: result.startTime_ || result[5],
+        hardcap: result.hardcap_ || result[6],
+        maxBuyPerWallet: result.maxBuyPerWallet_ || result[7]
+      }
+    } catch (error) {
+      console.error('❌ 获取 LGE 配置失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 获取 LP 分配配置信息
+   * @returns {Promise<Object>} LP 分配配置
+   */
+  async getLPDistributionConfig() {
+    try {
+      console.log('🔍 获取 LP 分配配置...')
+      const result = await this.callMethod('getLPDistributionConfig')
+
+      return {
+        userShare: result.userShare || result[0],
+        devShare: result.devShare || result[1],
+        devReceiver: result.devReceiver || result[2],
+        enabled: result.enabled || result[3],
+        shareBase: result.shareBase || result[4]
+      }
+    } catch (error) {
+      console.error('❌ 获取 LP 分配配置失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 获取预售基础配置信息
+   * @returns {Promise<Object>} 预售基础配置
+   */
+  async getPresaleConfig() {
+    try {
+      console.log('🔍 获取预售基础配置...')
+      const result = await this.callMethod('preSale')
+
+      return {
+        preSaleEthAmount: result.preSaleEthAmount || result[0],
+        preSaleMaxNum: result.preSaleMaxNum || result[1],
+        totalNumber: result.totalNumber || result[2],
+        verify: result.verify || result[3]
+      }
+    } catch (error) {
+      console.error('❌ 获取预售基础配置失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 获取交易配置信息
+   * @returns {Promise<Object>} 交易配置
+   */
+  async getTradeConfig() {
+    try {
+      console.log('🔍 获取交易配置...')
+      const result = await this.callMethod('trade')
+
+      return {
+        tradeEthAmount: result.tradeEthAmount || result[0],
+        tradeMaxNum: result.tradeMaxNum || result[1],
+        totalNumber: result.totalNumber || result[2]
+      }
+    } catch (error) {
+      console.error('❌ 获取交易配置失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 获取完整的预售配置信息（并行获取所有配置）
+   * @returns {Promise<Object>} 完整配置信息
+   */
+  async getFullPresaleConfig() {
+    try {
+      console.log('🔍 获取完整预售配置...')
+
+      const [lgeConfig, lpConfig, presaleConfig, tradeConfig] = await Promise.all([
+        this.getLGEConfig().catch(err => {
+          console.warn('⚠️ LGE 配置获取失败:', err)
+          return null
+        }),
+        this.getLPDistributionConfig().catch(err => {
+          console.warn('⚠️ LP 配置获取失败:', err)
+          return null
+        }),
+        this.getPresaleConfig().catch(err => {
+          console.warn('⚠️ 预售配置获取失败:', err)
+          return null
+        }),
+        this.getTradeConfig().catch(err => {
+          console.warn('⚠️ 交易配置获取失败:', err)
+          return null
+        })
+      ])
+
+      console.log('📊 完整配置获取结果:', {
+        hasLGE: !!lgeConfig,
+        hasLP: !!lpConfig,
+        hasPresale: !!presaleConfig,
+        hasTrade: !!tradeConfig
+      })
+
+      return {
+        lgeConfig,
+        lpConfig,
+        presaleConfig,
+        tradeConfig
+      }
+    } catch (error) {
+      console.error('❌ 获取完整预售配置失败:', error)
+      throw error
+    }
+  }
 }
 
 export default PresaleService

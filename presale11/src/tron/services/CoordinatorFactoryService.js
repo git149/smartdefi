@@ -402,6 +402,40 @@ class CoordinatorFactoryService extends BaseContractService {
   }
 
   /**
+   * 获取代币完整详情（包括配置标志）
+   * @param {string} tokenAddress - 代币地址
+   * @returns {Promise<Object>} 代币完整详情
+   */
+  async getTokenFullDetails(tokenAddress) {
+    try {
+      console.log('🔍 获取代币完整详情:', tokenAddress)
+
+      const base58Address = this.tronWebService.isValidAddress(tokenAddress)
+        ? tokenAddress
+        : this.tronWebService.tronWeb?.address?.fromHex?.(tokenAddress) || tokenAddress
+
+      const result = await this.callMethod('getTokenFullDetails', [base58Address])
+
+      return {
+        pair: {
+          tokenAddress: result.pair?.tokenAddress || result[0]?.tokenAddress || result[0]?.[0],
+          presaleAddress: result.pair?.presaleAddress || result[0]?.presaleAddress || result[0]?.[1],
+          creator: result.pair?.creator || result[0]?.creator || result[0]?.[2],
+          createdAt: result.pair?.createdAt || result[0]?.createdAt || result[0]?.[3],
+          tokenName: result.pair?.tokenName || result[0]?.tokenName || result[0]?.[4],
+          tokenSymbol: result.pair?.tokenSymbol || result[0]?.tokenSymbol || result[0]?.[5],
+          totalSupply: result.pair?.totalSupply || result[0]?.totalSupply || result[0]?.[6]
+        },
+        hasLPDistribution: result.hasLPDistribution || result[1],
+        hasLGEConfig: result.hasLGEConfig || result[2]
+      }
+    } catch (error) {
+      console.error('❌ 获取代币完整详情失败:', error)
+      throw error
+    }
+  }
+
+  /**
    * 根据预售地址获取代币地址
    * @param {string} presaleAddress - 预售地址
    * @returns {Promise<string>} 代币地址
@@ -511,14 +545,35 @@ class CoordinatorFactoryService extends BaseContractService {
         console.log('📋 默认解析 - 空结果')
       }
 
+      // 数据验证和调试信息
+      const pairsCount = Array.isArray(pairs) ? pairs.length : 0
+      const totalCount = parseInt(total.toString()) || 0
+
       console.log('✅ 解析后的结果:', {
-        pairsCount: Array.isArray(pairs) ? pairs.length : 0,
-        total: total.toString()
+        pairsCount,
+        total: totalCount,
+        offset,
+        limit,
+        isDataComplete: pairsCount === Math.min(limit, totalCount - offset)
       })
+
+      // 检查数据一致性
+      if (offset === 0 && limit >= totalCount && pairsCount !== totalCount) {
+        console.warn(`⚠️ 数据不一致警告: 请求获取所有${totalCount}个代币对，但只返回了${pairsCount}个`)
+        console.warn('⚠️ 这可能表明合约中存在无效或已删除的代币对')
+      }
 
       return {
         pairs: Array.isArray(pairs) ? pairs.map(pair => this.formatTokenPair(pair)) : [],
-        total: parseInt(total.toString()) || 0
+        total: totalCount,
+        // 添加调试信息
+        debug: {
+          requestedOffset: offset,
+          requestedLimit: limit,
+          returnedCount: pairsCount,
+          expectedCount: Math.min(limit, totalCount - offset),
+          isComplete: pairsCount === Math.min(limit, totalCount - offset)
+        }
       }
 
     } catch (error) {
@@ -538,6 +593,54 @@ class CoordinatorFactoryService extends BaseContractService {
         }
       }
 
+      throw error
+    }
+  }
+
+  /**
+   * 获取所有代币预售对（智能获取完整数据）
+   * 自动获取总数并返回所有可用的代币对
+   * @returns {Promise<Object>} 完整的代币对列表和总数
+   */
+  async getAllTokenPresalePairsComplete() {
+    try {
+      console.log('🔍 智能获取所有代币预售对...')
+
+      // 首先获取总数量
+      const totalPairs = await this.getTotalPairsCreated()
+      console.log('📊 总代币对数量:', totalPairs)
+
+      if (totalPairs === 0) {
+        console.log('ℹ️ 暂无代币对，返回空结果')
+        return {
+          pairs: [],
+          total: 0,
+          isComplete: true
+        }
+      }
+
+      // 获取所有代币对
+      const result = await this.getAllTokenPresalePairs(0, totalPairs)
+
+      // 验证数据完整性
+      const actualCount = result.pairs?.length || 0
+      const isComplete = actualCount === totalPairs
+
+      if (!isComplete) {
+        console.warn(`⚠️ 数据不完整: 获取到${actualCount}个代币对，期望${totalPairs}个`)
+      } else {
+        console.log(`✅ 数据完整: 成功获取所有${actualCount}个代币对`)
+      }
+
+      return {
+        ...result,
+        isComplete,
+        expectedTotal: totalPairs,
+        actualCount
+      }
+
+    } catch (error) {
+      console.error('❌ 智能获取所有代币预售对失败:', error)
       throw error
     }
   }

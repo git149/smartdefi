@@ -491,33 +491,60 @@
               <small v-else class="hint-text">每1 TRX可兑换的代币数量</small>
             </div>
 
-            <!-- Start Date -->
+            <!-- Start date and time -->
             <div class="form-group">
-              <label class="form-label">Start Date *</label>
-              <input
-                v-model="lgeInfo.startDate"
-                type="datetime-local"
-                class="form-input"
-                :class="{ error: validationErrors.startDate }"
-                @input="validateStartDate"
-                @blur="validateStartDate"
-              />
+              <label class="form-label">Start date and time *</label>
+              <div class="datetime-container">
+                <input
+                  v-model="lgeInfo.startDate"
+                  type="datetime-local"
+                  class="form-input datetime-input"
+                  :class="{ error: validationErrors.startDate }"
+                  @input="onStartDateChange"
+                  @blur="validateStartDate"
+                />
+                <div class="datetime-icon">📅</div>
+              </div>
               <small v-if="validationErrors.startDate" class="error-text">{{ validationErrors.startDate }}</small>
               <small v-else class="hint-text">预售开始时间</small>
             </div>
 
-            <!-- Duration -->
+            <!-- End date and time -->
             <div class="form-group">
-              <label class="form-label">Duration (Hours)</label>
-              <input
-                v-model="lgeInfo.duration"
-                type="number"
-                placeholder="24"
-                min="1"
-                max="168"
-                class="form-input"
-              />
-              <small class="hint-text">预售持续时间（小时）</small>
+              <label class="form-label">End date and time *</label>
+              <div class="datetime-container">
+                <input
+                  v-model="lgeInfo.endDate"
+                  type="datetime-local"
+                  class="form-input datetime-input"
+                  :class="{ error: validationErrors.endDate }"
+                  @input="onEndDateChange"
+                  @blur="validateEndDate"
+                />
+                <div class="datetime-icon">📅</div>
+              </div>
+              <small v-if="validationErrors.endDate" class="error-text">{{ validationErrors.endDate }}</small>
+              <small v-else class="hint-text">预售结束时间</small>
+            </div>
+
+            <!-- Time Summary Display -->
+            <div class="form-group">
+              <label class="form-label">Time Summary</label>
+              <div class="time-summary-container">
+                <div class="time-summary-row">
+                  <span class="time-label">Start time</span>
+                  <span class="time-value">{{ formatDisplayTime(lgeInfo.startDate) }}</span>
+                </div>
+                <div class="time-summary-row">
+                  <span class="time-label">End time</span>
+                  <span class="time-value">{{ formatDisplayTime(lgeInfo.endDate) }}</span>
+                </div>
+                <div class="time-summary-row">
+                  <span class="time-label">Duration</span>
+                  <span class="time-value duration-value">{{ calculatedDuration }}D</span>
+                </div>
+              </div>
+              <small class="hint-text">预售时间汇总信息</small>
             </div>
 
             <!-- Vesting配置 -->
@@ -714,7 +741,7 @@ export default {
         startTime: null,            // 预售开始时间
         hardcap: '1000',            // 硬顶限制 (TRX)
         maxBuyPerWallet: '100',     // 每个钱包最大购买量 (TRX)
-        duration: 24,               // 预售持续时间 (小时)
+        duration: 7,                // 预售持续时间 (天)
 
         // Vesting配置
         vestingEnabled: false,      // 是否启用vesting
@@ -755,7 +782,8 @@ export default {
         supplyForLPs: '80',         // Supply for LPs%
         rate: '1000',               // Rate (tokens per TRX)
         startDate: null,            // Start date
-        duration: 24,               // Duration in hours
+        endDate: null,              // End date
+        duration: 7,                // Duration in days (auto-calculated)
         vestingDelay: 7,            // Vesting delay (days)
         vestingRate: 10,            // Vesting rate (%)
         backingShare: 0,            // Backing share (%)
@@ -790,7 +818,8 @@ export default {
         softCap: '',
         maxBuy: '',
         rate: '',
-        startDate: ''
+        startDate: '',
+        endDate: ''
       },
 
 
@@ -857,14 +886,16 @@ export default {
                                this.lgeInfo.softCap &&
                                this.lgeInfo.maxBuy &&
                                this.lgeInfo.rate &&
-                               this.lgeInfo.startDate
+                               this.lgeInfo.startDate &&
+                               this.lgeInfo.endDate
 
       const hasNoErrors = !this.validationErrors.tokenForLGE &&
                          !this.validationErrors.hardCap &&
                          !this.validationErrors.softCap &&
                          !this.validationErrors.maxBuy &&
                          !this.validationErrors.rate &&
-                         !this.validationErrors.startDate
+                         !this.validationErrors.startDate &&
+                         !this.validationErrors.endDate
 
       const isValid = hasRequiredFields && hasNoErrors
 
@@ -912,6 +943,25 @@ export default {
 
     isFormValid() {
       return !Object.values(this.validationErrors).some(error => error !== '')
+    },
+
+    // 计算持续时间（天数）
+    calculatedDuration() {
+      if (!this.lgeInfo.startDate || !this.lgeInfo.endDate) {
+        return this.lgeInfo.duration || 7
+      }
+
+      const startTime = new Date(this.lgeInfo.startDate).getTime()
+      const endTime = new Date(this.lgeInfo.endDate).getTime()
+
+      if (endTime <= startTime) {
+        return 0
+      }
+
+      const diffMs = endTime - startTime
+      const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+
+      return diffDays
     }
   },
 
@@ -1272,7 +1322,8 @@ export default {
         supplyForLPs: '80',
         rate: '1000',
         startDate: null,
-        duration: 24,
+        endDate: null,
+        duration: 7,
         vestingDelay: 7,
         vestingRate: 10,
         backingShare: 0,
@@ -1644,8 +1695,8 @@ export default {
       if (!this.lgeConfig.enabled) return
 
       const duration = Number(this.lgeConfig.duration)
-      if (isNaN(duration) || duration < 1 || duration > 90) {
-        this.validationErrors.lgeDuration = '预售持续时间必须在1-90小时之间'
+      if (isNaN(duration) || duration < 7 || duration > 90) {
+        this.validationErrors.lgeDuration = '预售持续时间必须在7-90天之间'
       }
     },
 
@@ -1823,6 +1874,61 @@ export default {
       }
     },
 
+    // === 时间处理方法 ===
+
+    onStartDateChange() {
+      this.validateStartDate()
+      this.updateDurationFromDates()
+    },
+
+    onEndDateChange() {
+      this.validateEndDate()
+      this.updateDurationFromDates()
+    },
+
+    updateDurationFromDates() {
+      if (this.lgeInfo.startDate && this.lgeInfo.endDate) {
+        const calculatedDays = this.calculatedDuration
+        if (calculatedDays > 0) {
+          this.lgeInfo.duration = calculatedDays
+        }
+      }
+    },
+
+    formatDisplayTime(dateTimeString) {
+      if (!dateTimeString) {
+        return '--'
+      }
+
+      try {
+        const date = new Date(dateTimeString)
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        const hours = String(date.getHours()).padStart(2, '0')
+        const minutes = String(date.getMinutes()).padStart(2, '0')
+
+        // 计算距离现在的时间差
+        const now = new Date()
+        const diffMs = date.getTime() - now.getTime()
+        const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+        const diffHours = Math.ceil(diffMs / (1000 * 60 * 60))
+
+        let timeInfo = ''
+        if (diffDays > 0) {
+          timeInfo = `(${diffDays}d ${diffHours % 24}h)`
+        } else if (diffHours > 0) {
+          timeInfo = `(${diffHours}h)`
+        } else {
+          timeInfo = '(已过期)'
+        }
+
+        return `${year}/${month}/${day} ${hours}:${minutes}${timeInfo}`
+      } catch (error) {
+        return '--'
+      }
+    },
+
     validateStartDate() {
       if (!this.lgeInfo.startDate) {
         this.validationErrors.startDate = '请选择开始时间'
@@ -1838,6 +1944,47 @@ export default {
           this.validationErrors.startDate = `开始时间必须至少在当前时间${this.developmentConfig.minStartTimeMinutes}分钟之后 (${modeText})`
         } else {
           this.validationErrors.startDate = ''
+        }
+      }
+    },
+
+    validateEndDate() {
+      this.validationErrors.endDate = ''
+
+      if (!this.lgeInfo.endDate) {
+        this.validationErrors.endDate = '请选择结束时间'
+        return
+      }
+
+      const endTime = new Date(this.lgeInfo.endDate)
+      const now = new Date()
+
+      // 检查结束时间是否在未来
+      if (endTime <= now) {
+        this.validationErrors.endDate = '结束时间必须在当前时间之后'
+        return
+      }
+
+      // 检查结束时间是否晚于开始时间
+      if (this.lgeInfo.startDate) {
+        const startTime = new Date(this.lgeInfo.startDate)
+        if (endTime <= startTime) {
+          this.validationErrors.endDate = '结束时间必须晚于开始时间'
+          return
+        }
+
+        // 检查持续时间是否在有效范围内
+        const diffMs = endTime.getTime() - startTime.getTime()
+        const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+
+        if (diffDays < 7) {
+          this.validationErrors.endDate = '预售持续时间不能少于7天'
+          return
+        }
+
+        if (diffDays > 90) {
+          this.validationErrors.endDate = '预售持续时间不能超过90天'
+          return
         }
       }
     },
@@ -1860,6 +2007,7 @@ export default {
       this.validateMaxBuy()
       this.validateRate()
       this.validateStartDate()
+      this.validateEndDate()
     },
 
     // 安全的数值转换方法，避免科学计数法
@@ -1962,6 +2110,9 @@ export default {
       this.result = null
 
       try {
+        // 确保使用计算出的持续时间
+        this.updateDurationFromDates()
+
         // 验证所有字段
         this.validateAllFields()
 
@@ -5307,6 +5458,93 @@ export default {
   .input-suffix,
   .input-icon {
     right: 14px;
+  }
+}
+
+/* === 时间设置样式 === */
+.datetime-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.datetime-input {
+  flex: 1;
+  padding-right: 40px !important;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 14px;
+}
+
+.datetime-input:focus {
+  border-color: #00d4ff;
+  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2);
+}
+
+.datetime-icon {
+  position: absolute;
+  right: 12px;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.6);
+  pointer-events: none;
+}
+
+/* 时间汇总显示样式 */
+.time-summary-container {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 4px;
+}
+
+.time-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.time-summary-row:last-child {
+  border-bottom: none;
+}
+
+.time-label {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.time-value {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+}
+
+.duration-value {
+  color: #00d4ff;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .time-summary-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .time-value {
+    font-size: 13px;
+  }
+
+  .duration-value {
+    font-size: 15px;
   }
 }
 </style>

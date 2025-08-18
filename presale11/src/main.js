@@ -19,6 +19,9 @@ import Web3JS from "./common/web3.js";
 import md5 from 'js-md5';
 import TronPlugin from './tron';
 
+// 导入全局事件监控器（自动启动）
+import './tron/services/GlobalEventMonitor.js';
+
 
 // 过滤器
 Object.keys(filter).forEach(key => {

@@ -12,6 +12,35 @@
           </button>
           <h1 class="header-title">RWAunion</h1>
         </div>
+
+        <!-- 代币导航控件 -->
+        <div class="token-navigation">
+          <button
+            @click="navigateToPreviousToken"
+            class="nav-btn prev-btn"
+            :disabled="loading || currentTokenIndex <= 0"
+            title="上一个代币"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+
+          <span class="token-index-display">
+            {{ currentTokenIndex + 1 }} / {{ totalTokenCount || '?' }}
+          </span>
+
+          <button
+            @click="navigateToNextToken"
+            class="nav-btn next-btn"
+            :disabled="loading || currentTokenIndex >= (totalTokenCount - 1)"
+            title="下一个代币"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -168,10 +197,6 @@
               <div class="info-value">{{ tokenInfo.hardCap }}</div>
             </div>
             <div class="info-row">
-              <div class="info-label">Min buy</div>
-              <div class="info-value">{{ tokenInfo.minBuy }}</div>
-            </div>
-            <div class="info-row">
               <div class="info-label">Max buy</div>
               <div class="info-value">{{ tokenInfo.maxBuy }}</div>
             </div>
@@ -211,40 +236,96 @@
         </div>
 
         <!-- 绑定曲线百分比 -->
-        <div class="info-section-card">
-          <div class="curve-title">Binding Curve Percentage</div>
-
-          <div class="percentage-display">
-            {{ fundingPercentage.toFixed(2) }}%
-          </div>
-
-          <div class="progress-bar-container">
-            <div class="progress-bar" :style="{ width: fundingPercentage + '%' }"></div>
-            <div class="progress-handle" :style="{ left: fundingPercentage + '%' }"></div>
-          </div>
-
-          <div class="curve-description">
-            <p>When the progress reaches 100%, the casting will end.</p>
-          </div>
-        </div>
-
-        <!-- 预售输入区域 -->
-        <div class="info-section-card">
-          <div class="input-section">
-            <div class="input-row">
-              <label class="input-label">Input quantity</label>
-              <button @click="setMaxPresaleAmount" class="max-btn">MAX</button>
-            </div>
-            <input v-model="presaleInputAmount" type="number" class="amount-input" placeholder="0.0" />
-            <div class="balance-info">
-              TRX balance: {{ formatNumber(trxBalance) }}
+        <div class="info-section-card bonding-curve-card">
+          <div class="bonding-curve-header">
+            <div class="curve-title">Binding Curve Percentage</div>
+            <div class="percentage-badge">
+              {{ fundingPercentage.toFixed(2) }}%
             </div>
           </div>
 
-          <button @click="enterPresale" class="enter-presale-btn">
-            Enter presale
-          </button>
+          <div class="enhanced-progress-container">
+            <div class="progress-track">
+              <div
+                class="progress-fill"
+                :style="{ width: fundingPercentage + '%' }"
+              ></div>
+              <div
+                class="progress-thumb"
+                :style="{ left: fundingPercentage + '%' }"
+              ></div>
+            </div>
+            <div class="progress-labels">
+              <span class="progress-start">0%</span>
+              <span class="progress-end">100%</span>
+            </div>
+          </div>
+
+          <div class="curve-status-info">
+            <div class="status-text">
+              When the progress reaches 100%, the casting will end
+            </div>
+            <div class="funding-stats">
+              <div class="stat-item">
+                <span class="stat-label">Current</span>
+                <span class="stat-value">{{ fundingPercentage.toFixed(1) }}%</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Target</span>
+                <span class="stat-value">100%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 参与预售区域 -->
+          <div class="presale-participation-section">
+            <div class="presale-section-title">Enter presale</div>
+
+            <div class="presale-input-container">
+              <div class="amount-input-wrapper">
+                <input
+                  v-model="presaleAmount"
+                  type="number"
+                  placeholder="Input quantity"
+                  class="presale-amount-input"
+                  :disabled="presaleLoading || !isWalletConnected"
+                  @input="validatePresaleAmount"
+                />
+                <button
+                  class="max-button"
+                  @click="setMaxAmount"
+                  :disabled="presaleLoading || !isWalletConnected"
+                >
+                  MAX
+                </button>
+              </div>
+
+              <div class="balance-display">
+                TRX balance: {{ formatBalance(userTrxBalance) }}
+              </div>
+
+              <div v-if="presaleValidationError" class="validation-error">
+                {{ presaleValidationError }}
+              </div>
+
+              <button
+                class="enter-presale-button"
+                @click="enterPresale"
+                :disabled="!canEnterPresale"
+                :class="{
+                  'loading': presaleLoading,
+                  'success': presaleSuccess
+                }"
+              >
+                <span v-if="presaleLoading" class="loading-spinner"></span>
+                <span v-else-if="presaleSuccess">✓ Success</span>
+                <span v-else>Enter presale</span>
+              </button>
+            </div>
+          </div>
         </div>
+
+
 
         <!-- 内盘抢购区域 -->
         <div class="info-section-card">
@@ -280,32 +361,6 @@
 
       <!-- 预售内容区域 -->
       <div v-if="activeButton === 1" class="presale-content">
-        <!-- 买卖区域 -->
-        <div class="buy-sell-section">
-          <div class="buy-sell-tabs">
-            <button :class="['tab-btn', { active: buySellTab === 'buy' }]" @click="buySellTab = 'buy'">
-              Buy
-            </button>
-            <button :class="['tab-btn', { active: buySellTab === 'sell' }]" @click="buySellTab = 'sell'">
-              Sell
-            </button>
-          </div>
-
-          <div class="input-section">
-            <div class="input-row">
-              <label class="input-label">Input quantity</label>
-              <button @click="setMaxAmount" class="max-btn">MAX</button>
-            </div>
-            <input v-model="inputAmount" type="number" class="amount-input" placeholder="0.0" />
-            <div class="balance-info">
-              TRX balance: {{ formatNumber(trxBalance) }}
-            </div>
-          </div>
-
-          <button @click="handleBuySell" class="action-button">
-            {{ buySellTab === 'buy' ? 'BUY NOW' : 'SELL NOW' }}
-          </button>
-        </div>
 
         <!-- 流动性池详情 -->
         <div class="lp-details-section">
@@ -354,6 +409,9 @@
 <script>
 import TokenService from '../tron/services/TokenService';
 import PresaleService from '../tron/services/PresaleService';
+import coordinatorFactoryService from '../tron/services/CoordinatorFactoryService';
+import { AddressUtils } from '../tron/config';
+import presaleABI from '../../contract/presaleABI.json';
 
 export default {
   name: 'TokenDetailPage',
@@ -386,19 +444,23 @@ export default {
         // LGE相关参数
         tokenForLGE: '100%',
         tstTrxRate: '1 TST=1 TRX',
-        softCap: '0-1000TRX',
-        hardCap: '0-1000TRX',
+        softCap: '333 TRX',  // 硬顶的1/3
+        hardCap: '1000 TRX',
         minBuy: '500 TRX',
         maxBuy: '500 TRX',
         startTime: '2025/08/15 14:14(4d 2h)',
         endTime: '2025/08/15 14:14(4d 2h)',
-        duration: '10 days',
+        duration: '90 days',
         vestingDelay: '10 days',
         vestingRate: '10%',
         vestingRounds: '5 rounds',
         trxPair: '25% TRX / 50% union',
         backing: '25% TRX / 50% union'
       },
+
+      // 代币导航相关
+      totalTokenCount: 0,
+      currentTokenIndex: 0, // 当前代币索引的本地状态
 
       // 资金曲线数据
       fundingPercentage: 30.89,
@@ -409,6 +471,15 @@ export default {
       internalMarketQuota: 3,
       realTimePrice: '1 TRX ≈ 651 RWAUnion',
       internalMarketAmount: 100,
+
+      // 绑定曲线预售参与数据
+      presaleAmount: '',
+      userTrxBalance: 1648523,
+      presaleLoading: false,
+      presaleSuccess: false,
+      presaleValidationError: '',
+      presaleContractAddress: null,
+      walletWatcher: null,
 
       // 买卖相关数据
       buySellTab: 'buy',
@@ -433,9 +504,74 @@ export default {
     }
   },
 
+  computed: {
+    // 钱包连接状态
+    isWalletConnected() {
+      return this.$tronState?.isConnected || false;
+    },
+
+    // 是否可以参与预售
+    canEnterPresale() {
+      return (
+        this.isWalletConnected &&
+        !this.presaleLoading &&
+        this.presaleAmount &&
+        !this.presaleValidationError &&
+        parseFloat(this.presaleAmount) > 0
+      );
+    },
+
+    // 最大可投入金额
+    maxPresaleAmount() {
+      const balance = this.userTrxBalance || 0;
+      const hardCap = parseFloat(this.tokenInfo.hardCap?.replace(/[^\d.]/g, '') || '1000');
+      const currentRaised = (this.fundingPercentage / 100) * hardCap;
+      const remaining = hardCap - currentRaised;
+
+      return Math.min(balance, remaining);
+    }
+  },
+
   mounted() {
     this.initializeData();
     this.updateCountdown();
+
+    // 监听钱包连接状态变化
+    this.watchWalletConnection();
+
+    // 注册全局预售管理方法到控制台
+    this.registerConsoleCommands();
+  },
+
+  beforeDestroy() {
+    // 清理全局方法
+    this.unregisterConsoleCommands();
+  },
+
+  watch: {
+    // 监听路由查询参数变化
+    '$route.query.index': {
+      handler(newIndex, oldIndex) {
+        if (newIndex !== oldIndex && newIndex !== undefined) {
+          const targetIndex = parseInt(newIndex);
+          console.log(`🔄 路由索引变化: ${oldIndex} → ${newIndex}`);
+
+          // 只有当新索引与当前本地状态不同时才更新
+          if (targetIndex !== this.currentTokenIndex) {
+            this.currentTokenIndex = targetIndex;
+            console.log(`📊 同步本地索引状态: ${targetIndex}`);
+          }
+        }
+      },
+      immediate: false
+    }
+  },
+
+  beforeUnmount() {
+    // 清理定时器
+    if (this.walletWatcher) {
+      clearInterval(this.walletWatcher);
+    }
   },
 
   methods: {
@@ -461,103 +597,640 @@ export default {
 
     async loadTokenDetails() {
       const params = this.getUrlParams();
-      console.log('Loading token details with params:', params);
+      console.log('🔍 Loading token details with params:', params);
 
       // 如果有tokenAddress，直接使用
       if (params.tokenAddress && this.validateAddress(params.tokenAddress)) {
+        console.log('📍 使用指定的代币地址:', params.tokenAddress);
+        // 重置索引状态，因为使用的是地址而不是索引
+        this.currentTokenIndex = 0;
         await this.loadTokenByAddress(params.tokenAddress);
       }
       // 如果有tokenId，通过ID获取
       else if (params.tokenId) {
+        console.log('🆔 使用指定的代币ID:', params.tokenId);
+        // 重置索引状态，因为使用的是ID而不是索引
+        this.currentTokenIndex = 0;
         await this.loadTokenById(params.tokenId);
       }
-      // 默认加载CHOU代币
+      // 如果有index参数，加载指定索引的代币
+      else if (params.index !== undefined) {
+        const targetIndex = parseInt(params.index);
+        console.log('📊 使用指定的代币索引:', targetIndex);
+        // 设置初始索引状态
+        this.currentTokenIndex = targetIndex;
+        await this.loadTokenByIndex(targetIndex);
+      }
+      // 默认加载第0个代币
       else {
-        await this.loadDefaultToken();
+        console.log('🔄 使用默认代币（索引0）');
+        // 设置默认索引状态
+        this.currentTokenIndex = 0;
+        await this.loadTokenByIndex(0);
       }
     },
-    // 通过地址加载代币
+    // 通过地址加载代币（从链上读取Token信息与手续费配置）
     async loadTokenByAddress(tokenAddress) {
       try {
-        const tokenService = new TokenService(tokenAddress);
-        const tokenInfo = await tokenService.getTokenInfo();
+        const base58Address = AddressUtils.toBase58(tokenAddress)
+        const tokenService = new TokenService(base58Address)
+
+        const [info, baseCfg] = await Promise.all([
+          tokenService.getTokenInfo(),
+          tokenService.callMethod('baseConfig').catch(() => null)
+        ])
+
+        const decimals = parseInt(info.decimals)
+        const supplyFormatted = TokenService.formatTokenAmount(
+          info.totalSupply.toString(),
+          isNaN(decimals) ? 18 : decimals
+        )
+
+        let feeBuy = 0, feeSell = 0
+        if (baseCfg) {
+          feeBuy = Number(baseCfg.feeBuy || baseCfg[0] || 0)
+          feeSell = Number(baseCfg.feeSell || baseCfg[1] || 0)
+        }
+        const tokenomicPreset = `${(feeBuy / 100).toFixed(2)}%/${(feeSell / 100).toFixed(2)}%`
 
         this.tokenInfo = {
-          name: tokenInfo.name,
-          symbol: tokenInfo.symbol,
-          contractAddress: tokenAddress,
-          description: this.tokenInfo.description, // 保持默认描述
-          tokenName: tokenInfo.name,
-          nameSymbol: tokenInfo.symbol,
-          supply: tokenInfo.totalSupply.toString(),
-          tokenomicPreset: '0.5%/0.5%', // 暂时保持默认值
-          // 保持其他LGE参数的默认值
-          tokenForLGE: '100%',
-          tstTrxRate: '1 TST=1 TRX',
-          softCap: '0-1000TRX',
-          hardCap: '0-1000TRX',
-          minBuy: '500 TRX',
-          maxBuy: '500 TRX',
-          startTime: '2025/08/15 14:14(4d 2h)',
-          endTime: '2025/08/15 14:14(4d 2h)',
-          duration: '10 days',
-          vestingDelay: '10 days',
-          vestingRate: '10%',
-          vestingRounds: '5 rounds',
-          trxPair: '25% TRX / 50% union',
-          backing: '25% TRX / 50% union'
-        };
+          ...this.tokenInfo,
+          name: info.name,
+          symbol: info.symbol,
+          contractAddress: base58Address,
+          tokenName: info.name,
+          nameSymbol: `${info.name} (${info.symbol})`,
+          supply: supplyFormatted,
+          tokenomicPreset
+        }
       } catch (error) {
-        console.error('Failed to load token by address:', error);
-        this.$toast('代币信息加载失败');
+        console.error('Failed to load token by address:', error)
+        this.$toast('代币信息加载失败')
       }
     },
 
     // 通过ID加载代币
     async loadTokenById(tokenId) {
-      console.log('Loading token by ID:', tokenId);
-      // 暂时使用默认数据
-      this.loadDefaultToken();
+      console.log('🆔 Loading token by ID:', tokenId);
+      // 暂时使用默认数据（索引0）
+      await this.loadTokenByIndex(0);
     },
 
-    // 加载默认代币
+    // 加载默认代币：从工厂合约动态获取一个示例代币
     async loadDefaultToken() {
-      console.log('Loading default token');
-      // 保持现有的默认数据不变
+      console.log('Loading default token from factory')
+      await this.loadTokenFromFactoryExample()
     },
 
-    // 加载预售信息
-    async loadPresaleInfo() {
-      const params = this.getUrlParams();
+    // 从工厂合约获取一个代币示例并加载其详情
+    async loadTokenFromFactoryExample() {
+      try {
+        console.log('🔍 从工厂合约获取代币示例...')
 
-      if (params.presaleAddress && this.validateAddress(params.presaleAddress)) {
-        try {
-          const presaleService = new PresaleService(params.presaleAddress);
-          const presaleInfo = await presaleService.getPresaleBasicInfo();
+        // 使用新的智能获取方法，确保能获取到可用的代币
+        const result = await coordinatorFactoryService.getAllTokenPresalePairsComplete()
 
-          // 更新预售相关参数
-          this.tokenInfo = {
-            ...this.tokenInfo,
-            tokenForLGE: presaleInfo.tokenForLGE || '100%',
-            tstTrxRate: presaleInfo.tstTrxRate || '1 TST=1 TRX',
-            softCap: presaleInfo.softCap || '0-1000TRX',
-            hardCap: presaleInfo.hardCap || '0-1000TRX',
-            minBuy: presaleInfo.minBuy || '500 TRX',
-            maxBuy: presaleInfo.maxBuy || '500 TRX',
-            startTime: presaleInfo.startTime || '2025/08/15 14:14(4d 2h)',
-            endTime: presaleInfo.endTime || '2025/08/15 14:14(4d 2h)',
-            duration: presaleInfo.duration || '10 days',
-            vestingDelay: presaleInfo.vestingDelay || '10 days',
-            vestingRate: presaleInfo.vestingRate || '10%',
-            vestingRounds: presaleInfo.vestingRounds || '5 rounds',
-            trxPair: presaleInfo.trxPair || '25% TRX / 50% union',
-            backing: presaleInfo.backing || '25% TRX / 50% union'
-          };
-        } catch (error) {
-          console.error('Failed to load presale info:', error);
-          this.$toast('预售信息加载失败');
+        if (!result.pairs || result.pairs.length === 0) {
+          console.warn('⚠️ 工厂合约中没有找到任何代币对')
+          this.$toast('工厂合约中暂无可用代币')
+          return
+        }
+
+        console.log(`✅ 找到${result.pairs.length}个代币对，使用第7个作为示例`)
+
+        const pair = result.pairs[6]
+        const tokenAddress = AddressUtils.toBase58(pair.tokenAddress || pair[6])
+        await this.loadTokenByAddress(tokenAddress)
+
+      } catch (error) {
+        console.error('❌ 从工厂合约获取代币示例失败:', error)
+        this.$toast('从工厂合约获取代币失败')
+      }
+    },
+
+    /**
+     * 通过索引加载代币
+     * @param {number} index - 代币索引（0开始）
+     */
+    async loadTokenByIndex(index) {
+      try {
+        console.log(`🔍 加载索引为 ${index} 的代币...`);
+
+        // 获取所有代币对
+        const result = await coordinatorFactoryService.getAllTokenPresalePairsComplete();
+
+        if (!result.pairs || result.pairs.length === 0) {
+          console.warn('⚠️ 工厂合约中没有找到任何代币对');
+          this.$toast('工厂合约中暂无可用代币');
+          return;
+        }
+
+        console.log(`📊 总共找到 ${result.pairs.length} 个代币对`);
+
+        // 更新总代币数量
+        this.totalTokenCount = result.pairs.length;
+
+        // 验证索引范围
+        if (index < 0) {
+          console.warn(`⚠️ 索引不能为负数: ${index}，使用索引 0`);
+          index = 0;
+        } else if (index >= result.pairs.length) {
+          console.warn(`⚠️ 索引 ${index} 超出范围 (0-${result.pairs.length - 1})，使用最后一个代币`);
+          index = result.pairs.length - 1;
+          this.$toast(`指定的索引超出范围，显示最后一个代币（索引 ${index}）`);
+        }
+
+        const pair = result.pairs[index];
+        const tokenAddress = AddressUtils.toBase58(pair.tokenAddress || pair[0]);
+
+        console.log(`✅ 加载索引 ${index} 的代币:`, {
+          tokenSymbol: pair.tokenSymbol,
+          tokenName: pair.tokenName,
+          tokenAddress: tokenAddress
+        });
+
+        // 更新本地状态
+        this.currentTokenIndex = index;
+
+        // 在URL中更新当前索引（不刷新页面）
+        this.updateUrlWithIndex(index);
+
+        await this.loadTokenByAddress(tokenAddress);
+
+      } catch (error) {
+        console.error('❌ 通过索引加载代币失败:', error);
+        this.$toast(`加载索引 ${index} 的代币失败`);
+
+        // 回退到默认代币
+        if (index !== 0) {
+          console.log('🔄 回退到默认代币（索引 0）');
+          await this.loadTokenByIndex(0);
         }
       }
+    },
+
+    /**
+     * 更新URL中的索引参数（不刷新页面）
+     * @param {number} index - 代币索引
+     */
+    updateUrlWithIndex(index) {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('index', index.toString());
+
+        // 使用pushState更新URL而不刷新页面
+        window.history.pushState({}, '', url.toString());
+
+        console.log(`📍 URL已更新为索引 ${index}:`, url.toString());
+      } catch (error) {
+        console.warn('⚠️ 更新URL失败:', error);
+      }
+    },
+
+    // 加载预售信息：从预售合约直接获取完整配置，包含错误处理和回退机制
+    async loadPresaleInfo() {
+      const params = this.getUrlParams()
+
+      try {
+        console.log('🔍 开始加载预售配置信息...')
+
+        // 1. 获取预售合约地址
+        let presaleAddress = params.presaleAddress
+        let tokenAddress = this.tokenInfo.contractAddress
+
+        if (!presaleAddress && tokenAddress) {
+          presaleAddress = await this.getPresaleAddressWithFallback(tokenAddress)
+        }
+
+        if (!presaleAddress || !this.validateAddress(presaleAddress)) {
+          console.warn('⚠️ 无有效的预售合约地址，使用默认配置')
+          this.showDefaultPresaleConfig()
+          return
+        }
+
+        // 缓存有效的预售合约地址，供enterPresale方法使用
+        this.presaleContractAddress = presaleAddress
+        console.log('💾 预售合约地址已缓存:', presaleAddress)
+
+        // 2. 从预售合约获取完整配置
+        await this.loadPresaleConfigFromContract(presaleAddress)
+
+      } catch (error) {
+        console.error('❌ 加载预售信息失败:', error)
+        this.showDefaultPresaleConfig()
+        this.$toast('预售信息加载失败，显示默认配置')
+      }
+    },
+
+    // 获取预售地址，包含回退机制
+    async getPresaleAddressWithFallback(tokenAddress) {
+      try {
+        console.log('📍 尝试从工厂合约获取预售地址:', tokenAddress)
+
+        // 方法1：直接通过 getTokenFullDetails 获取
+        const tokenDetails = await coordinatorFactoryService.getTokenFullDetails(tokenAddress)
+        const presaleAddress = tokenDetails.pair?.presaleAddress
+
+        if (presaleAddress && this.validateAddress(presaleAddress)) {
+          console.log('✅ 成功获取预售地址:', presaleAddress)
+          return presaleAddress
+        }
+
+        throw new Error('getTokenFullDetails 返回无效地址')
+
+      } catch (error) {
+        console.warn('⚠️ getTokenFullDetails 失败，尝试回退方案:', error.message)
+
+        // 方法2：回退到 getAllTokenPresalePairs 获取有效的代币对
+        return await this.getValidTokenPairFromFactory()
+      }
+    },
+
+    // 从工厂合约获取有效的代币对作为回退方案
+    async getValidTokenPairFromFactory() {
+      try {
+        console.log('🔄 使用回退方案：从工厂合约获取有效代币对...')
+
+        // 首先获取总代币对数量
+        const totalPairs = await coordinatorFactoryService.getTotalPairsCreated()
+        console.log('📊 工厂合约总代币对数量:', totalPairs)
+
+        if (totalPairs === 0) {
+          console.warn('⚠️ 工厂合约中没有任何代币对')
+          return null
+        }
+
+        // 获取所有代币对（使用总数作为limit确保获取完整数据）
+        const { pairs } = await coordinatorFactoryService.getAllTokenPresalePairs(0, totalPairs)
+
+        console.log('📋 获取到的代币对数量:', pairs?.length || 0)
+        console.log('📋 预期代币对数量:', totalPairs)
+
+        if (!pairs || pairs.length === 0) {
+          console.warn('⚠️ 工厂合约返回空的代币对列表')
+          return null
+        }
+
+        // 验证数据一致性
+        if (pairs.length !== totalPairs) {
+          console.warn(`⚠️ 数据不一致: 获取到${pairs.length}个代币对，但总数为${totalPairs}`)
+        }
+
+        // 使用第7个有效的代币对
+        const validPair = pairs[6]
+        const presaleAddress = AddressUtils.toBase58(validPair.presaleAddress || validPair[1])
+        const tokenAddress = AddressUtils.toBase58(validPair.tokenAddress || validPair[0])
+
+        console.log('✅ 找到有效代币对:', {
+          tokenAddress,
+          presaleAddress,
+          totalAvailable: pairs.length
+        })
+
+        // 更新当前代币信息为有效的代币
+        await this.loadTokenByAddress(tokenAddress)
+
+        return presaleAddress
+
+      } catch (error) {
+        console.error('❌ 回退方案也失败了:', error)
+        console.error('❌ 错误详情:', {
+          message: error.message,
+          stack: error.stack
+        })
+        return null
+      }
+    },
+
+    // 显示默认预售配置
+    showDefaultPresaleConfig() {
+      console.log('📋 显示默认预售配置')
+
+      // 保持当前的默认值，确保页面正常显示
+      const defaultConfig = {
+        tokenForLGE: '100%',
+        tstTrxRate: '1 TST=1 TRX',
+        softCap: '333 TRX',  // 硬顶的1/3
+        hardCap: '1000 TRX',
+        minBuy: '500 TRX',
+        maxBuy: '500 TRX',
+        startTime: '2025/08/15 14:14(4d 2h)',
+        endTime: '2025/08/15 14:14(4d 2h)',
+        duration: '90 days',
+        vestingDelay: '10 days',
+        vestingRate: '10%',
+        vestingRounds: '5 rounds',
+        trxPair: '25% TRX / 50% union',
+        backing: '25% TRX / 50% union'
+      }
+
+      this.tokenInfo = { ...this.tokenInfo, ...defaultConfig }
+    },
+
+    // 从预售合约直接获取配置信息，包含详细错误处理
+    async loadPresaleConfigFromContract(presaleAddress) {
+      try {
+        console.log('📊 从预售合约获取配置:', presaleAddress)
+
+        const presaleService = new PresaleService(presaleAddress)
+
+        // 并行获取所有配置信息，每个调用都有独立的错误处理
+        const fullConfig = await this.getPresaleConfigWithRetry(presaleService)
+
+        console.log('📋 获取到的完整配置:', fullConfig)
+
+        // 检查是否获取到有效配置
+        const hasValidConfig = this.validatePresaleConfig(fullConfig)
+
+        if (hasValidConfig) {
+          // 映射配置数据到页面展示字段
+          this.updateTokenInfoFromContractConfig(fullConfig)
+          console.log('✅ 预售配置加载成功')
+        } else {
+          console.warn('⚠️ 获取的配置无效，使用默认值')
+          this.showDefaultPresaleConfig()
+        }
+
+      } catch (error) {
+        console.error('❌ 从合约获取配置失败:', error)
+
+        // 根据错误类型提供不同的处理
+        if (error.message && error.message.includes('REVERT')) {
+          console.warn('⚠️ 合约调用被回退，可能是无效的预售地址')
+          this.$toast('预售合约地址无效，显示默认配置')
+        } else if (error.message && error.message.includes('timeout')) {
+          console.warn('⚠️ 合约调用超时')
+          this.$toast('网络超时，请稍后重试')
+        } else {
+          console.warn('⚠️ 未知错误，使用默认配置')
+          this.$toast('加载配置失败，显示默认配置')
+        }
+
+        this.showDefaultPresaleConfig()
+      }
+    },
+
+    // 带重试机制的配置获取
+    async getPresaleConfigWithRetry(presaleService, maxRetries = 2) {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(`🔄 尝试获取配置 (${attempt}/${maxRetries})...`)
+
+          const fullConfig = await presaleService.getFullPresaleConfig()
+
+          // 如果成功获取，直接返回
+          if (fullConfig) {
+            return fullConfig
+          }
+
+          throw new Error('获取的配置为空')
+
+        } catch (error) {
+          console.warn(`⚠️ 第 ${attempt} 次尝试失败:`, error.message)
+
+          if (attempt === maxRetries) {
+            throw error // 最后一次尝试失败，抛出错误
+          }
+
+          // 等待一段时间后重试
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+        }
+      }
+    },
+
+    // 验证预售配置的有效性
+    validatePresaleConfig(config) {
+      if (!config) {
+        return false
+      }
+
+      const { lgeConfig, lpConfig, presaleConfig, tradeConfig } = config
+
+      // 至少需要有一个配置不为空
+      const hasAnyConfig = lgeConfig || lpConfig || presaleConfig || tradeConfig
+
+      console.log('🔍 配置验证结果:', {
+        hasLGE: !!lgeConfig,
+        hasLP: !!lpConfig,
+        hasPresale: !!presaleConfig,
+        hasTrade: !!tradeConfig,
+        isValid: hasAnyConfig
+      })
+
+      return hasAnyConfig
+    },
+
+    // 将合约配置数据映射到页面展示字段，包含安全的数据处理
+    updateTokenInfoFromContractConfig(config) {
+      try {
+        const { lgeConfig, lpConfig, presaleConfig, tradeConfig } = config || {}
+
+        console.log('🔄 映射配置数据到页面字段...', {
+          hasLGE: !!lgeConfig,
+          hasLP: !!lpConfig,
+          hasPresale: !!presaleConfig,
+          hasTrade: !!tradeConfig
+        })
+
+        const updates = {}
+        let successfulMappings = 0
+
+        // 从 LGE 配置映射字段
+        if (lgeConfig) {
+          try {
+            const lgeUpdates = this.mapLGEConfig(lgeConfig)
+            Object.assign(updates, lgeUpdates)
+            successfulMappings++
+            console.log('✅ LGE 配置映射成功')
+          } catch (error) {
+            console.warn('⚠️ LGE 配置映射失败:', error)
+          }
+        }
+
+        // 从 LP 配置映射字段
+        if (lpConfig) {
+          try {
+            const lpUpdates = this.mapLPConfig(lpConfig)
+            Object.assign(updates, lpUpdates)
+            successfulMappings++
+            console.log('✅ LP 配置映射成功')
+          } catch (error) {
+            console.warn('⚠️ LP 配置映射失败:', error)
+          }
+        }
+
+        // 从预售配置映射字段
+        if (presaleConfig) {
+          try {
+            const presaleUpdates = this.mapPresaleConfig(presaleConfig)
+            Object.assign(updates, presaleUpdates)
+            successfulMappings++
+            console.log('✅ 预售配置映射成功')
+          } catch (error) {
+            console.warn('⚠️ 预售配置映射失败:', error)
+          }
+        }
+
+        // 从交易配置映射字段
+        if (tradeConfig) {
+          try {
+            const tradeUpdates = this.mapTradeConfig(tradeConfig)
+            Object.assign(updates, tradeUpdates)
+            successfulMappings++
+            console.log('✅ 交易配置映射成功')
+          } catch (error) {
+            console.warn('⚠️ 交易配置映射失败:', error)
+          }
+        }
+
+        // 只有在成功映射至少一个配置时才更新
+        if (successfulMappings > 0) {
+          this.tokenInfo = { ...this.tokenInfo, ...updates }
+          console.log(`✅ 配置数据映射完成，成功映射 ${successfulMappings} 个配置:`, updates)
+        } else {
+          console.warn('⚠️ 没有成功映射任何配置，保持默认值')
+        }
+
+      } catch (error) {
+        console.error('❌ 配置数据映射过程中发生错误:', error)
+      }
+    },
+
+    // 映射 LGE 配置
+    mapLGEConfig(lgeConfig) {
+      const updates = {}
+
+      if (lgeConfig.startTime) {
+        updates.startTime = this.formatTimestamp(lgeConfig.startTime)
+      }
+
+      if (lgeConfig.hardcap) {
+        const formattedHardCap = this.formatTrxAmount(lgeConfig.hardcap)
+        updates.hardCap = formattedHardCap
+        // 自动计算软顶（硬顶的1/3）
+        updates.softCap = this.calculateSoftCap(formattedHardCap)
+      }
+
+      if (lgeConfig.maxBuyPerWallet) {
+        updates.maxBuy = this.formatTrxAmount(lgeConfig.maxBuyPerWallet)
+      }
+
+      if (lgeConfig.vestingDelay) {
+        updates.vestingDelay = this.formatDuration(lgeConfig.vestingDelay)
+      }
+
+      if (lgeConfig.vestingRate) {
+        updates.vestingRate = `${lgeConfig.vestingRate}%`
+        updates.vestingRounds = this.calculateVestingRounds(updates.vestingRate)
+      }
+
+      if (lgeConfig.backingShare || lgeConfig.backingReceiver) {
+        updates.backing = this.formatBackingInfo(lgeConfig.backingShare, lgeConfig.backingReceiver)
+      }
+
+      // 计算结束时间和持续时间
+      if (lgeConfig.startTime && lgeConfig.vestingDelay) {
+        updates.endTime = this.calculateEndTime(lgeConfig.startTime, lgeConfig.vestingDelay)
+        updates.duration = this.calculateDuration(lgeConfig.startTime, updates.endTime)
+      }
+
+      return updates
+    },
+
+    // 映射 LP 配置
+    mapLPConfig(lpConfig) {
+      const updates = {}
+
+      if (lpConfig.userShare && lpConfig.devShare) {
+        updates.trxPair = this.formatLpDistribution(lpConfig.userShare, lpConfig.devShare)
+      }
+
+      return updates
+    },
+
+    // 映射预售配置
+    mapPresaleConfig(presaleConfig) {
+      const updates = {}
+
+      if (presaleConfig.preSaleMaxNum) {
+        updates.tokenForLGE = this.formatTokenAmount(presaleConfig.preSaleMaxNum)
+      }
+
+      if (presaleConfig.preSaleEthAmount) {
+        updates.minBuy = this.formatTrxAmount(presaleConfig.preSaleEthAmount)
+      }
+
+      // 注意：软顶现在在 mapLGEConfig 中自动计算，无需在此处重复计算
+
+      return updates
+    },
+
+    // 动态计算软顶（硬顶的1/3）
+    calculateSoftCap(hardCapValue) {
+      try {
+        if (!hardCapValue || hardCapValue === 0) {
+          console.log('⚠️ 硬顶值为空，使用默认软顶')
+          return '333 TRX'  // 默认值
+        }
+
+        // 如果硬顶是字符串格式，提取数值
+        let numericValue = hardCapValue
+        if (typeof hardCapValue === 'string') {
+          // 提取数字部分，处理带逗号的数字，例如 "1,000 TRX" -> 1000
+          const cleanString = hardCapValue.replace(/,/g, '') // 移除逗号
+          const match = cleanString.match(/(\d+(?:\.\d+)?)/);
+          if (match) {
+            numericValue = parseFloat(match[1])
+            console.log(`🔍 从硬顶字符串提取数值: "${hardCapValue}" -> ${numericValue}`)
+          } else {
+            console.warn('⚠️ 无法从硬顶字符串中提取数值:', hardCapValue)
+            return '333 TRX'
+          }
+        }
+
+        // 计算软顶 = 硬顶 / 3
+        const softCapValue = Math.round(numericValue / 3)
+
+        // 直接格式化为 TRX 字符串，不需要转换为 SUN 单位
+        const formattedSoftCap = `${softCapValue.toLocaleString()} TRX`
+
+        console.log(`💰 软顶动态计算: ${numericValue} / 3 = ${softCapValue} -> ${formattedSoftCap}`)
+        return formattedSoftCap
+
+      } catch (error) {
+        console.error('❌ 软顶计算失败:', error)
+        return '333 TRX'  // 返回默认值
+      }
+    },
+
+    // 更新硬顶时自动重新计算软顶
+    updateHardCapAndRecalculateSoftCap(newHardCap) {
+      try {
+        // 更新硬顶
+        this.tokenInfo.hardCap = newHardCap
+
+        // 自动重新计算软顶
+        this.tokenInfo.softCap = this.calculateSoftCap(newHardCap)
+
+        console.log('🔄 硬顶更新，软顶自动重新计算:', {
+          hardCap: newHardCap,
+          softCap: this.tokenInfo.softCap
+        })
+
+      } catch (error) {
+        console.error('❌ 硬顶更新和软顶重新计算失败:', error)
+      }
+    },
+
+    // 映射交易配置
+    mapTradeConfig(tradeConfig) {
+      const updates = {}
+
+      if (tradeConfig.tradeEthAmount) {
+        updates.tstTrxRate = this.formatExchangeRate(tradeConfig.tradeEthAmount)
+      }
+
+      return updates
     },
 
     // 添加这些新方法
@@ -566,7 +1239,8 @@ export default {
         tokenId: this.$route.params.id,
         tokenAddress: this.$route.query.tokenAddress,
         presaleAddress: this.$route.query.presaleAddress,
-        creator: this.$route.query.creator
+        creator: this.$route.query.creator,
+        index: this.$route.query.index // 添加索引参数支持
       };
     },
 
@@ -583,6 +1257,76 @@ export default {
       this.activeButton = index;
     },
 
+    /**
+     * 导航到指定索引的代币
+     * @param {number} index - 目标索引
+     */
+    async navigateToTokenIndex(index) {
+      console.log(`🔄 导航到代币索引: ${this.currentTokenIndex} → ${index}`);
+      console.log(`📊 当前状态: 总数=${this.totalTokenCount}, 当前索引=${this.currentTokenIndex}`);
+
+      this.loading = true;
+
+      try {
+        await this.loadTokenByIndex(index);
+        console.log(`✅ 导航成功: 新索引=${this.currentTokenIndex}`);
+      } catch (error) {
+        console.error('❌ 导航到代币索引失败:', error);
+        this.$toast('切换代币失败');
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    /**
+     * 获取当前代币索引
+     */
+    getCurrentTokenIndex() {
+      // 优先使用本地状态，如果没有则从URL参数获取
+      if (this.currentTokenIndex !== undefined) {
+        return this.currentTokenIndex;
+      }
+
+      const params = this.getUrlParams();
+      const indexFromUrl = params.index ? parseInt(params.index) : 0;
+      this.currentTokenIndex = indexFromUrl;
+      return indexFromUrl;
+    },
+
+    /**
+     * 导航到下一个代币
+     */
+    async navigateToNextToken() {
+      const currentIndex = this.currentTokenIndex;
+      const nextIndex = currentIndex + 1;
+
+      console.log(`🔄 导航到下一个代币: ${currentIndex} → ${nextIndex}`);
+
+      if (nextIndex < this.totalTokenCount) {
+        await this.navigateToTokenIndex(nextIndex);
+      } else {
+        console.warn(`⚠️ 已经是最后一个代币 (索引 ${currentIndex})`);
+        this.$toast('已经是最后一个代币');
+      }
+    },
+
+    /**
+     * 导航到上一个代币
+     */
+    async navigateToPreviousToken() {
+      const currentIndex = this.currentTokenIndex;
+      const prevIndex = currentIndex - 1;
+
+      console.log(`🔄 导航到上一个代币: ${currentIndex} → ${prevIndex}`);
+
+      if (prevIndex >= 0) {
+        await this.navigateToTokenIndex(prevIndex);
+      } else {
+        console.warn(`⚠️ 已经是第一个代币 (索引 ${currentIndex})`);
+        this.$toast('已经是第一个代币');
+      }
+    },
+
     // 格式化地址显示
     formatAddress(address) {
       if (!address) return '';
@@ -593,7 +1337,9 @@ export default {
       try {
         if (window.tronWeb && window.tronWeb.defaultAddress.base58) {
           const balance = await window.tronWeb.trx.getBalance();
-          this.trxBalance = window.tronWeb.fromSun(balance);
+          const balanceInTrx = window.tronWeb.fromSun(balance);
+          this.trxBalance = balanceInTrx;
+          this.userTrxBalance = balanceInTrx; // 同时更新绑定曲线预售的余额
         }
       } catch (error) {
         console.error('Failed to load user balance:', error);
@@ -680,6 +1426,676 @@ export default {
         this.presaleInputAmount = '';
         this.$toast('预售成功！');
       }, 2000);
+    },
+
+    // === 绑定曲线预售相关方法 ===
+
+    // 格式化余额显示
+    formatBalance(balance) {
+      if (!balance) return '0';
+      return Number(balance).toLocaleString();
+    },
+
+    // 验证预售金额
+    validatePresaleAmount() {
+      this.presaleValidationError = '';
+
+      const amount = parseFloat(this.presaleAmount);
+
+      if (!this.presaleAmount || isNaN(amount)) {
+        return;
+      }
+
+      if (amount <= 0) {
+        this.presaleValidationError = '金额必须大于0';
+        return;
+      }
+
+      if (amount > this.userTrxBalance) {
+        this.presaleValidationError = '余额不足';
+        return;
+      }
+
+      if (amount > this.maxPresaleAmount) {
+        this.presaleValidationError = `超过最大可投入金额 ${this.maxPresaleAmount.toFixed(2)} TRX`;
+        return;
+      }
+
+      // 检查最小投入限制
+      // const minBuy = parseFloat(this.tokenInfo.minBuy?.replace(/[^\d.]/g, '') || '1');
+      const minBuy = 1; // 固定最小投入金额为1 TRX
+      if (amount < minBuy) {
+        this.presaleValidationError = `最小投入金额为 ${minBuy} TRX`;
+        return;
+      }
+    },
+
+    // 设置最大金额
+    setMaxAmount() {
+      this.presaleAmount = this.maxPresaleAmount.toString();
+      this.validatePresaleAmount();
+    },
+
+    // 获取用户TRX余额
+    async getUserTrxBalance() {
+      try {
+        if (!this.isWalletConnected) {
+          this.userTrxBalance = 0;
+          return;
+        }
+
+        const tronWeb = window.tronWeb;
+        if (!tronWeb) {
+          throw new Error('TronWeb not available');
+        }
+
+        const balance = await tronWeb.trx.getBalance(tronWeb.defaultAddress.base58);
+        this.userTrxBalance = tronWeb.fromSun(balance);
+
+      } catch (error) {
+        console.error('Failed to get TRX balance:', error);
+        this.userTrxBalance = 0;
+      }
+    },
+
+    // 参与预售
+    async enterPresale() {
+      if (!this.canEnterPresale) {
+        return;
+      }
+
+      this.presaleLoading = true;
+      this.presaleSuccess = false;
+
+      try {
+        // 检查钱包连接
+        if (!this.isWalletConnected) {
+          throw new Error('请先连接钱包');
+        }
+
+        const tronWeb = window.tronWeb;
+        if (!tronWeb) {
+          throw new Error('TronWeb not available');
+        }
+
+        // 验证金额
+        this.validatePresaleAmount();
+        if (this.presaleValidationError) {
+          throw new Error(this.presaleValidationError);
+        }
+
+        const amount = parseFloat(this.presaleAmount);
+        const amountInSun = tronWeb.toSun(amount);
+
+        // 获取预售合约地址
+        const presaleAddress = await this.getPresaleContractAddress();
+        if (!presaleAddress) {
+          throw new Error('预售合约地址未找到');
+        }
+
+        // 检查预售状态
+        await this.checkPresaleStatus(presaleAddress);
+
+        // 调用预售合约
+        const contract = await tronWeb.contract(presaleABI, presaleAddress);
+
+        // 调用preSale方法参与预售
+        const result = await contract.preSale().send({
+          callValue: amountInSun,
+          feeLimit: 100000000 // 100 TRX fee limit
+        });
+
+        console.log('Presale transaction result:', result);
+
+        // 等待交易确认
+        await this.waitForTransaction(result);
+
+        // 成功处理
+        this.presaleSuccess = true;
+        this.$toast('预售参与成功！');
+
+        // 更新余额和进度
+        await this.getUserTrxBalance();
+        await this.updateFundingProgress();
+
+        // 清空输入
+        setTimeout(() => {
+          this.presaleAmount = '';
+          this.presaleSuccess = false;
+        }, 3000);
+
+      } catch (error) {
+        console.error('Presale failed:', error);
+        this.$toast(error.message || '预售参与失败');
+      } finally {
+        this.presaleLoading = false;
+      }
+    },
+
+    // 获取预售合约地址
+    async getPresaleContractAddress() {
+      try {
+        // 如果已经缓存了地址，直接返回
+        if (this.presaleContractAddress) {
+          console.log('✅ 使用缓存的预售合约地址:', this.presaleContractAddress);
+          return this.presaleContractAddress;
+        }
+
+        console.log('🔍 开始获取预售合约地址...');
+
+        // 使用已有的预售地址获取逻辑（与loadPresaleInfo中的逻辑保持一致）
+        const tokenAddress = this.tokenInfo.contractAddress;
+        if (!tokenAddress) {
+          throw new Error('代币合约地址未找到');
+        }
+
+        // 调用已有的预售地址获取方法
+        const presaleAddress = await this.getPresaleAddressWithFallback(tokenAddress);
+
+        if (!presaleAddress || !this.validateAddress(presaleAddress)) {
+          throw new Error('获取到的预售合约地址无效');
+        }
+
+        // 缓存有效的预售地址
+        this.presaleContractAddress = presaleAddress;
+        console.log('✅ 预售合约地址获取成功:', presaleAddress);
+
+        return presaleAddress;
+
+      } catch (error) {
+        console.error('❌ 获取预售合约地址失败:', error);
+        throw new Error(`无法获取预售合约地址: ${error.message}`);
+      }
+    },
+
+    // 检查预售状态
+    async checkPresaleStatus(presaleAddress) {
+      try {
+        console.log('🔍 检查预售状态...');
+
+        // 创建预售服务实例
+        const presaleService = new PresaleService(presaleAddress);
+
+        // 获取预售状态
+        const presaleStatus = await presaleService.getPresaleStatus();
+        console.log('📊 当前预售状态:', presaleStatus);
+
+        // 状态验证
+        if (presaleStatus === 0) {
+          throw new Error('预售尚未开始，请等待发行方开启预售');
+        } else if (presaleStatus >= 2) {
+          throw new Error('预售已结束，无法继续参与');
+        } else if (presaleStatus === 1) {
+          console.log('✅ 预售进行中，可以参与');
+          return true;
+        } else {
+          throw new Error(`预售状态异常 (${presaleStatus})，请联系发行方`);
+        }
+
+      } catch (error) {
+        console.error('❌ 预售状态检查失败:', error);
+        throw error;
+      }
+    },
+
+    // 等待交易确认
+    async waitForTransaction(txId, timeout = 60000) {
+      console.log('⏳ 开始等待交易确认, TxID:', txId);
+      const startTime = Date.now();
+      let retryCount = 0;
+      const maxRetries = Math.floor(timeout / 2000); // 每2秒重试一次
+
+      while (Date.now() - startTime < timeout && retryCount < maxRetries) {
+        try {
+          retryCount++;
+          console.log(`🔄 第${retryCount}次查询交易状态...`);
+
+          const tronWeb = window.tronWeb;
+
+          // 先尝试获取交易信息
+          const txInfo = await tronWeb.trx.getTransactionInfo(txId);
+          console.log('📋 交易信息:', txInfo);
+
+          // 检查交易是否已确认
+          if (txInfo && txInfo.id) {
+            // 更完善的成功判断逻辑
+            const isSuccess = this.isTransactionSuccess(txInfo);
+
+            if (isSuccess) {
+              console.log('✅ 交易确认成功!');
+              console.log('📊 交易详情:', {
+                id: txInfo.id,
+                blockNumber: txInfo.blockNumber,
+                fee: txInfo.fee,
+                result: txInfo.result,
+                receipt: txInfo.receipt
+              });
+              return txInfo;
+            } else if (this.isTransactionFailed(txInfo)) {
+              console.error('❌ 交易执行失败:', txInfo);
+              throw new Error(`交易执行失败: ${this.getFailureReason(txInfo)}`);
+            } else {
+              console.log('⏳ 交易仍在处理中...');
+            }
+          } else {
+            // 如果没有交易信息，尝试获取交易详情
+            try {
+              const tx = await tronWeb.trx.getTransaction(txId);
+              if (tx && tx.txID) {
+                console.log('📄 交易已广播，等待打包确认...');
+              } else {
+                console.log('⚠️ 交易尚未广播');
+              }
+            } catch (e) {
+              console.log('⚠️ 无法获取交易详情:', e.message);
+            }
+          }
+
+          // 等待2秒后重试
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        } catch (error) {
+          console.warn(`⚠️ 第${retryCount}次查询失败:`, error.message);
+
+          // 如果是查询错误，继续等待
+          if (error.message.includes('Transaction not found') ||
+              error.message.includes('Invalid transaction id') ||
+              error.message.includes('timeout') ||
+              error.message.includes('network')) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            continue;
+          }
+
+          // 其他错误直接抛出
+          throw error;
+        }
+      }
+
+      // 超时后给出更友好的提示
+      console.warn('⏰ 交易确认超时，但交易可能仍在处理中');
+      throw new Error(`交易确认超时，请在区块链浏览器中查看交易状态: ${txId}`);
+    },
+
+    // 判断交易是否成功
+    isTransactionSuccess(txInfo) {
+      // 检查多种成功条件
+      if (!txInfo || !txInfo.id) {
+        return false;
+      }
+
+      // 1. 检查 result 字段（字符串形式）
+      if (txInfo.result === 'SUCCESS') {
+        return true;
+      }
+
+      // 2. 检查 receipt 对象中的 result 字段
+      if (txInfo.receipt && txInfo.receipt.result === 'SUCCESS') {
+        return true;
+      }
+
+      // 3. 检查是否有 blockNumber（已打包到区块）且没有失败标记
+      if (txInfo.blockNumber && txInfo.blockNumber > 0) {
+        // 如果有区块号但没有明确的失败标记，通常表示成功
+        if (!txInfo.result || txInfo.result === '' || txInfo.result === 'SUCCESS') {
+          return true;
+        }
+
+        // 检查 receipt 中的结果
+        if (txInfo.receipt) {
+          if (txInfo.receipt.result === 'SUCCESS' ||
+              (txInfo.receipt.result === '' && !txInfo.receipt.revert)) {
+            return true;
+          }
+        }
+      }
+
+      // 4. 检查费用是否已扣除（表明交易已执行）
+      if (txInfo.fee && txInfo.fee > 0 && txInfo.blockNumber) {
+        // 有费用且有区块号，检查是否有失败标记
+        if (!this.hasFailureIndicators(txInfo)) {
+          return true;
+        }
+      }
+
+      return false;
+    },
+
+    // 判断交易是否失败
+    isTransactionFailed(txInfo) {
+      if (!txInfo || !txInfo.id) {
+        return false;
+      }
+
+      // 检查明确的失败标记
+      if (txInfo.result === 'FAILED' || txInfo.result === 'REVERT') {
+        return true;
+      }
+
+      if (txInfo.receipt) {
+        if (txInfo.receipt.result === 'FAILED' ||
+            txInfo.receipt.result === 'REVERT' ||
+            txInfo.receipt.revert) {
+          return true;
+        }
+      }
+
+      return false;
+    },
+
+    // 检查是否有失败指示器
+    hasFailureIndicators(txInfo) {
+      if (txInfo.result && (txInfo.result === 'FAILED' || txInfo.result === 'REVERT')) {
+        return true;
+      }
+
+      if (txInfo.receipt && (
+          txInfo.receipt.result === 'FAILED' ||
+          txInfo.receipt.result === 'REVERT' ||
+          txInfo.receipt.revert
+      )) {
+        return true;
+      }
+
+      return false;
+    },
+
+    // 获取失败原因
+    getFailureReason(txInfo) {
+      if (txInfo.receipt && txInfo.receipt.revert) {
+        return '合约执行被回滚';
+      }
+
+      if (txInfo.result === 'FAILED') {
+        return '交易执行失败';
+      }
+
+      if (txInfo.result === 'REVERT') {
+        return '交易被回滚';
+      }
+
+      return '未知错误';
+    },
+
+    // ==================== 控制台预售管理命令 ====================
+
+    // 注册控制台命令
+    registerConsoleCommands() {
+      try {
+        // 将预售管理方法绑定到全局window对象
+        window.presaleAdmin = {
+          // 查询预售状态
+          getStatus: this.consoleGetPresaleStatus.bind(this),
+          // 开启预售
+          start: this.consoleStartPresale.bind(this),
+          // 结束预售
+          end: this.consoleEndPresale.bind(this),
+          // 检查管理员权限
+          checkOwner: this.consoleCheckOwner.bind(this),
+          // 帮助信息
+          help: this.consoleShowHelp.bind(this)
+        };
+
+        console.log('🎮 预售管理控制台已激活！');
+        console.log('📖 输入 presaleAdmin.help() 查看可用命令');
+
+      } catch (error) {
+        console.error('❌ 注册控制台命令失败:', error);
+      }
+    },
+
+    // 清理控制台命令
+    unregisterConsoleCommands() {
+      try {
+        if (window.presaleAdmin) {
+          delete window.presaleAdmin;
+          console.log('🧹 预售管理控制台已清理');
+        }
+      } catch (error) {
+        console.error('❌ 清理控制台命令失败:', error);
+      }
+    },
+
+    // 控制台命令：显示帮助信息
+    consoleShowHelp() {
+      console.log(`
+🎮 预售管理控制台命令帮助
+═══════════════════════════════════════
+
+📊 查询命令：
+  presaleAdmin.getStatus()     - 查询当前预售状态
+  presaleAdmin.checkOwner()    - 检查当前钱包是否为管理员
+
+🎛️ 管理命令（仅管理员）：
+  presaleAdmin.start()         - 开启预售（设置状态为1）
+  presaleAdmin.end()           - 结束预售（设置状态为2）
+
+📖 其他命令：
+  presaleAdmin.help()          - 显示此帮助信息
+
+📝 状态说明：
+  0 = 未开始    1 = 进行中    2 = 已结束
+
+⚠️ 注意：管理命令需要管理员权限且会消耗TRX作为手续费
+═══════════════════════════════════════
+      `);
+    },
+
+    // 控制台命令：查询预售状态
+    async consoleGetPresaleStatus() {
+      try {
+        console.log('🔍 正在查询预售状态...');
+
+        const presaleAddress = await this.getPresaleContractAddress();
+        if (!presaleAddress) {
+          console.error('❌ 无法获取预售合约地址');
+          return;
+        }
+
+        const presaleService = new PresaleService(presaleAddress);
+        const status = await presaleService.getPresaleStatus();
+
+        const statusText = presaleService.getPresaleStatusText(status);
+
+        console.log(`
+📊 预售状态查询结果
+═══════════════════════════════════════
+🏷️  合约地址: ${presaleAddress}
+📈  当前状态: ${status} (${statusText})
+⏰  查询时间: ${new Date().toLocaleString()}
+═══════════════════════════════════════
+        `);
+
+        return { status, statusText, contractAddress: presaleAddress };
+
+      } catch (error) {
+        console.error('❌ 查询预售状态失败:', error);
+        console.error('💡 请确保钱包已连接且网络正常');
+      }
+    },
+
+    // 控制台命令：检查管理员权限
+    async consoleCheckOwner() {
+      try {
+        console.log('🔐 正在检查管理员权限...');
+
+        if (!this.isWalletConnected) {
+          console.error('❌ 钱包未连接，请先连接钱包');
+          return false;
+        }
+
+        const presaleAddress = await this.getPresaleContractAddress();
+        if (!presaleAddress) {
+          console.error('❌ 无法获取预售合约地址');
+          return false;
+        }
+
+        const presaleService = new PresaleService(presaleAddress);
+        const currentAddress = window.tronWeb.defaultAddress.base58;
+        const isOwner = await presaleService.isOwner(currentAddress);
+
+        console.log(`
+🔐 管理员权限检查结果
+═══════════════════════════════════════
+🏷️  合约地址: ${presaleAddress}
+👤  当前钱包: ${currentAddress}
+🛡️  管理员权限: ${isOwner ? '✅ 是' : '❌ 否'}
+⏰  检查时间: ${new Date().toLocaleString()}
+═══════════════════════════════════════
+        `);
+
+        return isOwner;
+
+      } catch (error) {
+        console.error('❌ 检查管理员权限失败:', error);
+        console.error('💡 请确保钱包已连接且网络正常');
+        return false;
+      }
+    },
+
+    // 控制台命令：开启预售
+    async consoleStartPresale() {
+      try {
+        console.log('🚀 正在开启预售...');
+
+        // 检查权限
+        const isOwner = await this.consoleCheckOwner();
+        if (!isOwner) {
+          console.error('❌ 权限不足：只有合约管理员才能开启预售');
+          return false;
+        }
+
+        const presaleAddress = await this.getPresaleContractAddress();
+        const presaleService = new PresaleService(presaleAddress);
+
+        // 检查当前状态
+        const currentStatus = await presaleService.getPresaleStatus();
+        if (currentStatus === 1) {
+          console.warn('⚠️ 预售已经在进行中，无需重复开启');
+          return false;
+        }
+
+        console.log('📝 正在提交开启预售交易...');
+        const result = await presaleService.startPresale();
+
+        console.log(`
+🚀 预售开启成功！
+═══════════════════════════════════════
+🏷️  合约地址: ${presaleAddress}
+📈  新状态: 1 (进行中)
+🔗  交易哈希: ${result}
+⏰  操作时间: ${new Date().toLocaleString()}
+═══════════════════════════════════════
+        `);
+
+        // 刷新页面数据
+        setTimeout(() => {
+          this.loadPresaleInfo();
+        }, 3000);
+
+        return true;
+
+      } catch (error) {
+        console.error('❌ 开启预售失败:', error);
+        console.error('💡 请检查网络连接和TRX余额');
+        return false;
+      }
+    },
+
+    // 控制台命令：结束预售
+    async consoleEndPresale() {
+      try {
+        console.log('🛑 正在结束预售...');
+
+        // 检查权限
+        const isOwner = await this.consoleCheckOwner();
+        if (!isOwner) {
+          console.error('❌ 权限不足：只有合约管理员才能结束预售');
+          return false;
+        }
+
+        const presaleAddress = await this.getPresaleContractAddress();
+        const presaleService = new PresaleService(presaleAddress);
+
+        // 检查当前状态
+        const currentStatus = await presaleService.getPresaleStatus();
+        if (currentStatus >= 2) {
+          console.warn('⚠️ 预售已经结束，无需重复操作');
+          return false;
+        }
+
+        console.log('📝 正在提交结束预售交易...');
+        const result = await presaleService.endPresale();
+
+        console.log(`
+🛑 预售结束成功！
+═══════════════════════════════════════
+🏷️  合约地址: ${presaleAddress}
+📈  新状态: 2 (已结束)
+🔗  交易哈希: ${result}
+⏰  操作时间: ${new Date().toLocaleString()}
+═══════════════════════════════════════
+        `);
+
+        // 刷新页面数据
+        setTimeout(() => {
+          this.loadPresaleInfo();
+        }, 3000);
+
+        return true;
+
+      } catch (error) {
+        console.error('❌ 结束预售失败:', error);
+        console.error('💡 请检查网络连接和TRX余额');
+        return false;
+      }
+    },
+
+    // 更新资金进度
+    async updateFundingProgress() {
+      try {
+        const presaleAddress = await this.getPresaleContractAddress();
+        if (!presaleAddress) return;
+
+        const tronWeb = window.tronWeb;
+        const contract = await tronWeb.contract(presaleABI, presaleAddress);
+
+        // 获取总筹集金额
+        const totalRaised = await contract.totalPresaleBNB().call();
+        const hardCap = parseFloat(this.tokenInfo.hardCap?.replace(/[^\d.]/g, '') || '1000');
+
+        // 更新进度百分比
+        const raisedInTrx = tronWeb.fromSun(totalRaised);
+        this.fundingPercentage = Math.min((raisedInTrx / hardCap) * 100, 100);
+
+      } catch (error) {
+        console.error('Failed to update funding progress:', error);
+      }
+    },
+
+    // 监听钱包连接状态
+    watchWalletConnection() {
+      // 初始检查
+      this.checkWalletConnection();
+
+      // 定期检查钱包连接状态
+      this.walletWatcher = setInterval(() => {
+        this.checkWalletConnection();
+      }, 2000);
+    },
+
+    // 检查钱包连接状态
+    async checkWalletConnection() {
+      const wasConnected = this.isWalletConnected;
+      const isNowConnected = !!(window.tronWeb && window.tronWeb.defaultAddress?.base58);
+
+      if (!wasConnected && isNowConnected) {
+        // 钱包刚连接，更新余额
+        await this.getUserTrxBalance();
+      } else if (wasConnected && !isNowConnected) {
+        // 钱包断开连接，重置余额
+        this.userTrxBalance = 0;
+        this.presaleAmount = '';
+        this.presaleValidationError = '';
+      }
     },
 
     // 减少内盘数量
@@ -788,6 +2204,191 @@ export default {
     // 更新倒计时
     updateCountdown() {
       console.log('倒计时更新');
+    },
+
+    // ==================== 数据格式化工具方法 ====================
+
+    // 格式化时间戳
+    formatTimestamp(timestamp) {
+      if (!timestamp) return '2025/08/15 14:14(4d 2h)'
+
+      try {
+        const date = new Date(parseInt(timestamp) * 1000)
+        const now = new Date()
+        const diffMs = date.getTime() - now.getTime()
+        const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+        const diffHours = Math.ceil((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+
+        const dateStr = date.toLocaleDateString('zh-CN').replace(/\//g, '/')
+        const timeStr = date.toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit' })
+        const relativeStr = diffMs > 0 ? `(${diffDays}d ${diffHours}h)` : '(已开始)'
+
+        return `${dateStr} ${timeStr}${relativeStr}`
+      } catch (error) {
+        console.error('时间格式化失败:', error)
+        return '2025/08/15 14:14(4d 2h)'
+      }
+    },
+
+    // 格式化持续时间
+    formatDuration(seconds) {
+      if (!seconds) return '90 days'
+
+      try {
+        const days = Math.floor(parseInt(seconds) / (24 * 60 * 60))
+        return `${days} days`
+      } catch (error) {
+        return '10 days'
+      }
+    },
+
+    // 格式化 TRX 金额
+    formatTrxAmount(amount) {
+      if (!amount) return '0 TRX'
+
+      try {
+        const trxAmount = parseInt(amount) / 1000000 // 转换 SUN 到 TRX
+        return `${trxAmount.toLocaleString()} TRX`
+      } catch (error) {
+        return '0 TRX'
+      }
+    },
+
+    // 格式化代币数量
+    formatTokenAmount(amount) {
+      if (!amount) return '100%'
+
+      try {
+        const tokenAmount = parseInt(amount)
+        return `${tokenAmount.toLocaleString()}`
+      } catch (error) {
+        return '100%'
+      }
+    },
+
+    // 格式化兑换比例
+    formatExchangeRate(amount) {
+      if (!amount) return '1 TST=1 TRX'
+
+      try {
+        const rate = parseInt(amount) / 1000000 // 转换 SUN 到 TRX
+        return `1 TST=${rate} TRX`
+      } catch (error) {
+        return '1 TST=1 TRX'
+      }
+    },
+
+    // 格式化背书信息
+    formatBackingInfo(backingShare, backingReceiver) {
+      if (!backingShare || parseInt(backingShare) === 0) {
+        return '25% TRX / 50% union'
+      }
+
+      try {
+        const percentage = parseInt(backingShare)
+        const receiverShort = backingReceiver ?
+          `${backingReceiver.slice(0, 6)}...${backingReceiver.slice(-4)}` :
+          'union'
+        return `${percentage}% TRX / ${100 - percentage}% ${receiverShort}`
+      } catch (error) {
+        return '25% TRX / 50% union'
+      }
+    },
+
+    // 格式化 LP 分配
+    formatLpDistribution(userShare, devShare) {
+      try {
+        const userPercent = parseInt(userShare) / 100 || 75
+        const devPercent = parseInt(devShare) / 100 || 25
+        return `${userPercent}% TRX / ${devPercent}% union`
+      } catch (error) {
+        return '25% TRX / 50% union'
+      }
+    },
+
+    // 计算结束时间
+    calculateEndTime(startTime, duration) {
+      if (!startTime || !duration) return '2025/08/15 14:14(4d 2h)'
+
+      try {
+        const start = parseInt(startTime)
+        const durationSec = parseInt(duration)
+        const endTimestamp = start + durationSec
+        return this.formatTimestamp(endTimestamp)
+      } catch (error) {
+        return '2025/08/15 14:14(4d 2h)'
+      }
+    },
+
+    // 计算持续时间（按天显示）
+    calculateDuration(startTime, endTime) {
+      if (!startTime) return '90 days'
+
+      try {
+        // 方法1：如果有 vestingDelay，直接使用它来计算天数
+        if (typeof startTime === 'number' && typeof endTime === 'string') {
+          // 从格式化的时间字符串中提取天数信息
+          const match = endTime.match(/\((\d+)d/)
+          if (match) {
+            const days = parseInt(match[1])
+            return `${days} days`
+          }
+        }
+
+        // 方法2：如果都是时间戳，计算时间差
+        if (typeof startTime === 'number' && typeof endTime === 'number') {
+          const diffSeconds = endTime - startTime
+          const days = Math.floor(diffSeconds / (24 * 60 * 60))
+          return `${days} days`
+        }
+
+        // 方法3：如果 startTime 是时间戳，endTime 是字符串，尝试解析
+        if (typeof startTime === 'number' && typeof endTime === 'string') {
+          // 尝试从 endTime 字符串中提取时间戳
+          const endTimestamp = this.parseTimestampFromString(endTime)
+          if (endTimestamp) {
+            const diffSeconds = endTimestamp - startTime
+            const days = Math.floor(diffSeconds / (24 * 60 * 60))
+            return `${days} days`
+          }
+        }
+
+        console.log('⚠️ 无法计算持续时间，使用默认值:', { startTime, endTime })
+        return '90 days'
+      } catch (error) {
+        console.error('❌ 计算持续时间失败:', error)
+        return '90 days'
+      }
+    },
+
+    // 从格式化的时间字符串中解析时间戳
+    parseTimestampFromString(timeString) {
+      try {
+        // 尝试从字符串中提取日期部分，例如 "2025/08/15 14:14(4d 2h)"
+        const dateMatch = timeString.match(/(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{1,2})/)
+        if (dateMatch) {
+          const [, year, month, day, hour, minute] = dateMatch
+          const date = new Date(year, month - 1, day, hour, minute)
+          return Math.floor(date.getTime() / 1000)
+        }
+        return null
+      } catch (error) {
+        console.error('❌ 解析时间字符串失败:', error)
+        return null
+      }
+    },
+
+    // 计算解锁轮次
+    calculateVestingRounds(vestingRate) {
+      if (!vestingRate) return '5 rounds'
+
+      try {
+        const rate = parseInt(vestingRate.replace('%', ''))
+        const rounds = Math.ceil(100 / rate)
+        return `${rounds} rounds`
+      } catch (error) {
+        return '5 rounds'
+      }
     }
   }
 }
@@ -1131,64 +2732,135 @@ export default {
   }
 }
 
-/* 资金曲线 */
-.curve-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #ffffff;
-  margin-bottom: 16px;
+/* === 增强的绑定曲线样式 === */
+.bonding-curve-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
 }
 
-.percentage-display {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 12px 20px;
-  display: inline-block;
-  color: #ffffff;
-  font-size: 24px;
-  font-weight: 700;
+.bonding-curve-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 20px;
+}
+
+.curve-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+}
+
+.percentage-badge {
+  background: rgba(255, 255, 255, 0.9);
+  color: #1a1a1a;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 16px;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.enhanced-progress-container {
+  margin-bottom: 20px;
+}
+
+.progress-track {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+  border-radius: 4px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 20px;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3));
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-20px); opacity: 0; }
+  50% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(20px); opacity: 0; }
+}
+
+.progress-thumb {
+  position: absolute;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  background: #ffffff;
+  border: 3px solid #6366f1;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+}
+
+.curve-status-info {
   text-align: center;
 }
 
-.progress-bar-container {
-  width: 100%;
-  height: 8px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-  position: relative;
-  margin-bottom: 20px;
-  overflow: hidden;
+.status-text {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  margin-bottom: 16px;
+  line-height: 1.4;
 }
 
-.progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, #8b5cf6 0%, #3b82f6 100%);
-  border-radius: 4px;
-  transition: width 0.3s ease;
+.funding-stats {
+  display: flex;
+  justify-content: space-around;
+  gap: 20px;
 }
 
-.progress-handle {
-  position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 16px;
-  height: 16px;
-  background: #ffffff;
-  border-radius: 50%;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  z-index: 2;
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
-.curve-description p {
-  color: #8b9dc3;
-  font-size: 13px;
-  line-height: 1.6;
-  margin-bottom: 8px;
+.stat-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
 
-  &:last-child {
-    margin-bottom: 0;
-  }
+.stat-value {
+  font-size: 16px;
+  color: #ffffff;
+  font-weight: 700;
 }
 
 /* 输入区域 */
@@ -1568,6 +3240,36 @@ export default {
     }
   }
 
+  /* 绑定曲线响应式调整 */
+  .bonding-curve-card {
+    padding: 16px;
+  }
+
+  .bonding-curve-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .curve-title {
+    font-size: 16px;
+  }
+
+  .percentage-badge {
+    padding: 6px 12px;
+    font-size: 14px;
+    align-self: flex-end;
+  }
+
+  .funding-stats {
+    gap: 16px;
+  }
+
+  .stat-value {
+    font-size: 14px;
+  }
+
   .action-buttons {
     gap: 8px;
 
@@ -1583,12 +3285,267 @@ export default {
   }
 }
 
+/* === 预售参与区域样式 === */
+.presale-participation-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 20px;
+  margin-top: 20px;
+}
+
+.presale-section-title {
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.presale-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.amount-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.presale-amount-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 14px 80px 14px 16px;
+  color: #ffffff;
+  font-size: 16px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.presale-amount-input:focus {
+  border-color: #00d4ff;
+  box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.presale-amount-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.presale-amount-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.max-button {
+  position: absolute;
+  right: 8px;
+  background: #00d4ff;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 2;
+}
+
+.max-button:hover:not(:disabled) {
+  background: #00b8e6;
+  transform: scale(1.05);
+}
+
+.max-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.balance-display {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  text-align: left;
+  padding-left: 4px;
+}
+
+.validation-error {
+  color: #ff6b6b;
+  font-size: 13px;
+  padding-left: 4px;
+  margin-top: -4px;
+}
+
+.enter-presale-button {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 16px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  position: relative;
+  overflow: hidden;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.enter-presale-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+}
+
+.enter-presale-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.enter-presale-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+}
+
+.enter-presale-button.loading {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  cursor: not-allowed;
+}
+
+.enter-presale-button.success {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  animation: successPulse 0.6s ease-out;
+}
+
+@keyframes successPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid #ffffff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 /* 大屏幕适配 */
 @media (min-width: 768px) {
   .token-detail-page {
     max-width: 480px;
     margin: 0 auto;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* 响应式调整 */
+@media (max-width: 375px) {
+  .presale-participation-section {
+    padding-top: 16px;
+    margin-top: 16px;
+  }
+
+  .presale-section-title {
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+
+  .presale-amount-input {
+    padding: 12px 70px 12px 14px;
+    font-size: 15px;
+  }
+
+  .max-button {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+
+  .enter-presale-button {
+    padding: 14px 20px;
+    font-size: 15px;
+    min-height: 48px;
+  }
+}
+
+/* === 代币导航控件样式 === */
+.token-navigation {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.nav-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+}
+
+.nav-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.token-index-display {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 60px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* 响应式调整 */
+@media (max-width: 480px) {
+  .token-navigation {
+    gap: 8px;
+  }
+
+  .nav-btn {
+    padding: 6px;
+    min-width: 28px;
+    height: 28px;
+  }
+
+  .token-index-display {
+    font-size: 12px;
+    padding: 4px 8px;
+    min-width: 50px;
   }
 }
 </style>

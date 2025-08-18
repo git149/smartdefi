@@ -71,12 +71,13 @@ export const CONTRACT_ADDRESSES = {
  */
 export const DEFAULT_PROJECT_CONTRACTS = {
   NILE: {
-    TOKEN_ADDRESS: 'TGX1nrURc8by7Jdsv7zrxuEYSNgsmD3Qm3',
-    PRESALE_ADDRESS: 'TQqMakjbxrKPFQfSukQ4fkMeuvEddP36Vj',
+    TOKEN_ADDRESS: 'TNmNmMMVS8BmWgTem7HExyjru1bv21sKRC',
+    PRESALE_ADDRESS: 'TS6bcFFQuooYFmrufqd79qM6FSdEpY9gee',
     PROJECT_NAME: 'Default Token',
     PROJECT_SYMBOL: 'DTK',
     PROJECT_DESCRIPTION: '默认代币项目'
   },
+  
   MAINNET: {
     TOKEN_ADDRESS: '',
     PRESALE_ADDRESS: '',
