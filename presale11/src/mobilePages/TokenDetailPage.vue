@@ -646,6 +646,13 @@ export default {
           isNaN(decimals) ? 18 : decimals
         )
 
+        // 添加调试日志
+        console.log(`📊 第七个代币totalSupply处理:`, {
+          raw: info.totalSupply.toString(),
+          decimals: isNaN(decimals) ? 18 : decimals,
+          formatted: supplyFormatted
+        })
+
         let feeBuy = 0, feeSell = 0
         if (baseCfg) {
           feeBuy = Number(baseCfg.feeBuy || baseCfg[0] || 0)
@@ -1100,19 +1107,33 @@ export default {
     mapLGEConfig(lgeConfig) {
       const updates = {}
 
+      // 添加原始数据调试日志
+      console.log('🔍 LGE配置原始数据:', {
+        startTime: lgeConfig.startTime,
+        hardcap: lgeConfig.hardcap,
+        maxBuyPerWallet: lgeConfig.maxBuyPerWallet,
+        vestingDelay: lgeConfig.vestingDelay,
+        vestingRate: lgeConfig.vestingRate
+      })
+
       if (lgeConfig.startTime) {
         updates.startTime = this.formatTimestamp(lgeConfig.startTime)
       }
 
       if (lgeConfig.hardcap) {
+        console.log(`🎯 处理硬顶数据: ${lgeConfig.hardcap} (类型: ${typeof lgeConfig.hardcap})`)
         const formattedHardCap = this.formatTrxAmount(lgeConfig.hardcap)
         updates.hardCap = formattedHardCap
+        console.log(`🎯 硬顶格式化结果: ${formattedHardCap}`)
         // 自动计算软顶（硬顶的1/3）
         updates.softCap = this.calculateSoftCap(formattedHardCap)
       }
 
       if (lgeConfig.maxBuyPerWallet) {
-        updates.maxBuy = this.formatTrxAmount(lgeConfig.maxBuyPerWallet)
+        console.log(`💰 处理最大购买数据: ${lgeConfig.maxBuyPerWallet} (类型: ${typeof lgeConfig.maxBuyPerWallet})`)
+        const formattedMaxBuy = this.formatTrxAmount(lgeConfig.maxBuyPerWallet)
+        updates.maxBuy = formattedMaxBuy
+        console.log(`💰 最大购买格式化结果: ${formattedMaxBuy}`)
       }
 
       if (lgeConfig.vestingDelay) {
@@ -1153,7 +1174,8 @@ export default {
       const updates = {}
 
       if (presaleConfig.preSaleMaxNum) {
-        updates.tokenForLGE = this.formatTokenAmount(presaleConfig.preSaleMaxNum)
+        // 使用默认的18位decimals，因为这里没有具体的decimals信息
+        updates.tokenForLGE = this.formatTokenAmount(presaleConfig.preSaleMaxNum, 18)
       }
 
       if (presaleConfig.preSaleEthAmount) {
@@ -1165,7 +1187,7 @@ export default {
       return updates
     },
 
-    // 动态计算软顶（硬顶的1/3）
+    // 动态计算软顶（硬顶的1/3）- 修复：改进数值提取和处理逻辑
     calculateSoftCap(hardCapValue) {
       try {
         if (!hardCapValue || hardCapValue === 0) {
@@ -1176,12 +1198,25 @@ export default {
         // 如果硬顶是字符串格式，提取数值
         let numericValue = hardCapValue
         if (typeof hardCapValue === 'string') {
-          // 提取数字部分，处理带逗号的数字，例如 "1,000 TRX" -> 1000
-          const cleanString = hardCapValue.replace(/,/g, '') // 移除逗号
-          const match = cleanString.match(/(\d+(?:\.\d+)?)/);
+          // 提取数字部分，处理带逗号的数字和科学计数法，例如 "1,000,000,000,000,000 TRX" -> 1000000000000000
+          const cleanString = hardCapValue.replace(/[,\s]/g, '') // 移除逗号和空格
+          const match = cleanString.match(/(\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/);
           if (match) {
             numericValue = parseFloat(match[1])
             console.log(`🔍 从硬顶字符串提取数值: "${hardCapValue}" -> ${numericValue}`)
+
+            // 检查是否是异常大的数值（可能是单位错误）
+            if (numericValue > 1000000000) { // 超过10亿
+              console.warn(`⚠️ 检测到异常大的硬顶数值: ${numericValue}，可能需要单位转换`)
+              // 尝试除以常见的单位转换因子
+              if (numericValue > 1e15) { // 超过千万亿，可能是wei单位
+                numericValue = numericValue / 1e18 // 除以10^18
+                console.log(`🔄 应用wei到ether转换: ${numericValue}`)
+              } else if (numericValue > 1e12) { // 超过万亿，可能是sun单位
+                numericValue = numericValue / 1e6 // 除以10^6 (SUN到TRX)
+                console.log(`🔄 应用SUN到TRX转换: ${numericValue}`)
+              }
+            }
           } else {
             console.warn('⚠️ 无法从硬顶字符串中提取数值:', hardCapValue)
             return '333 TRX'
@@ -1191,8 +1226,15 @@ export default {
         // 计算软顶 = 硬顶 / 3
         const softCapValue = Math.round(numericValue / 3)
 
-        // 直接格式化为 TRX 字符串，不需要转换为 SUN 单位
-        const formattedSoftCap = `${softCapValue.toLocaleString()} TRX`
+        // 格式化显示
+        let formattedSoftCap
+        if (softCapValue >= 1000000) {
+          formattedSoftCap = `${(softCapValue / 1000000).toFixed(2)}M TRX`
+        } else if (softCapValue >= 1000) {
+          formattedSoftCap = `${(softCapValue / 1000).toFixed(2)}K TRX`
+        } else {
+          formattedSoftCap = `${softCapValue.toLocaleString()} TRX`
+        }
 
         console.log(`💰 软顶动态计算: ${numericValue} / 3 = ${softCapValue} -> ${formattedSoftCap}`)
         return formattedSoftCap
@@ -2242,26 +2284,61 @@ export default {
       }
     },
 
-    // 格式化 TRX 金额
+    // 格式化 TRX 金额 - 修复：正确处理SUN到TRX转换，避免二次格式化
     formatTrxAmount(amount) {
       if (!amount) return '0 TRX'
 
       try {
-        const trxAmount = parseInt(amount) / 1000000 // 转换 SUN 到 TRX
-        return `${trxAmount.toLocaleString()} TRX`
+        // 处理BigInt类型
+        let numericAmount = amount
+        if (typeof amount === 'bigint') {
+          numericAmount = amount.toString()
+        }
+
+        // 转换为数字并处理SUN到TRX的转换
+        const sunAmount = parseFloat(numericAmount.toString())
+        const trxAmount = sunAmount / 1000000 // 转换 SUN 到 TRX
+
+        // 添加详细调试日志
+        console.log(`💰 TRX金额转换详情:`, {
+          原始输入: amount,
+          SUN数值: sunAmount,
+          TRX数值: trxAmount,
+          输入类型: typeof amount
+        })
+
+        // 修复：合理的格式化阈值，避免正常数值被错误格式化
+        if (trxAmount >= 10000000) { // 1千万TRX以上才使用M单位
+          return `${(trxAmount / 1000000).toFixed(2)}M TRX`
+        } else if (trxAmount >= 10000) { // 1万TRX以上才使用K单位
+          return `${(trxAmount / 1000).toFixed(2)}K TRX`
+        } else {
+          // 对于正常范围的数值（如1000 TRX），直接显示
+          return `${Math.round(trxAmount).toLocaleString()} TRX`
+        }
       } catch (error) {
+        console.warn('⚠️ TRX金额格式化失败:', error, 'amount:', amount)
         return '0 TRX'
       }
     },
 
-    // 格式化代币数量
-    formatTokenAmount(amount) {
+    // 格式化代币数量 - 修复：正确处理decimals参数
+    formatTokenAmount(amount, decimals = 18) {
       if (!amount) return '100%'
 
       try {
-        const tokenAmount = parseInt(amount)
-        return `${tokenAmount.toLocaleString()}`
+        // 如果amount是字符串且包含小数点，说明已经格式化过了
+        if (typeof amount === 'string' && amount.includes('.')) {
+          const num = parseFloat(amount)
+          return `${num.toLocaleString()}`
+        }
+
+        // 使用TokenService的静态方法正确处理decimals
+        const formattedAmount = TokenService.formatTokenAmount(amount.toString(), decimals)
+        const num = parseFloat(formattedAmount)
+        return `${num.toLocaleString()}`
       } catch (error) {
+        console.warn('⚠️ 代币数量格式化失败:', error, 'amount:', amount, 'decimals:', decimals)
         return '100%'
       }
     },
@@ -2320,40 +2397,52 @@ export default {
       }
     },
 
-    // 计算持续时间（按天显示）
+    // 计算持续时间（按天显示）- 修复：简化逻辑，提高可靠性
     calculateDuration(startTime, endTime) {
-      if (!startTime) return '90 days'
+      if (!startTime) {
+        console.log('⚠️ 开始时间为空，使用默认持续时间')
+        return '90 days'
+      }
 
       try {
-        // 方法1：如果有 vestingDelay，直接使用它来计算天数
-        if (typeof startTime === 'number' && typeof endTime === 'string') {
-          // 从格式化的时间字符串中提取天数信息
-          const match = endTime.match(/\((\d+)d/)
-          if (match) {
-            const days = parseInt(match[1])
-            return `${days} days`
-          }
+        let startTimestamp = startTime
+        let endTimestamp = endTime
+
+        // 统一转换为时间戳（秒）
+        if (typeof startTime === 'string') {
+          startTimestamp = this.parseTimestampFromString(startTime)
+        } else if (typeof startTime === 'number') {
+          startTimestamp = startTime
         }
 
-        // 方法2：如果都是时间戳，计算时间差
-        if (typeof startTime === 'number' && typeof endTime === 'number') {
-          const diffSeconds = endTime - startTime
+        if (typeof endTime === 'string') {
+          // 先尝试从格式化字符串中提取天数
+          const dayMatch = endTime.match(/\((\d+)d/)
+          if (dayMatch) {
+            const days = parseInt(dayMatch[1])
+            console.log(`✅ 从格式化字符串提取持续时间: ${days} days`)
+            return `${days} days`
+          }
+          // 如果没有找到天数，尝试解析为时间戳
+          endTimestamp = this.parseTimestampFromString(endTime)
+        } else if (typeof endTime === 'number') {
+          endTimestamp = endTime
+        }
+
+        // 如果成功获取到两个时间戳，计算差值
+        if (startTimestamp && endTimestamp && typeof startTimestamp === 'number' && typeof endTimestamp === 'number') {
+          const diffSeconds = Math.abs(endTimestamp - startTimestamp)
           const days = Math.floor(diffSeconds / (24 * 60 * 60))
+          console.log(`✅ 计算持续时间成功: ${startTimestamp} -> ${endTimestamp} = ${days} days`)
           return `${days} days`
         }
 
-        // 方法3：如果 startTime 是时间戳，endTime 是字符串，尝试解析
-        if (typeof startTime === 'number' && typeof endTime === 'string') {
-          // 尝试从 endTime 字符串中提取时间戳
-          const endTimestamp = this.parseTimestampFromString(endTime)
-          if (endTimestamp) {
-            const diffSeconds = endTimestamp - startTime
-            const days = Math.floor(diffSeconds / (24 * 60 * 60))
-            return `${days} days`
-          }
-        }
-
-        console.log('⚠️ 无法计算持续时间，使用默认值:', { startTime, endTime })
+        console.log('⚠️ 无法计算持续时间，参数类型不匹配:', {
+          startTime: typeof startTime,
+          endTime: typeof endTime,
+          startTimestamp,
+          endTimestamp
+        })
         return '90 days'
       } catch (error) {
         console.error('❌ 计算持续时间失败:', error)
