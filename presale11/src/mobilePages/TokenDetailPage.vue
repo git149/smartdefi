@@ -432,7 +432,7 @@ export default {
       tokenInfo: {
         name: 'CHOU',
         symbol: 'CHO',
-        contractAddress: '0xbDd4A37C18327652BbbF6d90888A2f3969e4d6el',
+        contractAddress: 'TE8EDTFy7CD2TXyrb7wCCHNaC8rao9HEiC',
         description: 'PEPE visits all northern countries and regions in 2025 - Alaska, Canada, Greenland, Iceland, Norway, Sweden, Finland and Siberia. He is not scare from the cold and polar bears. PEPE enjoys the beautiful north nature and the northern lights.',
 
         // 基本信息
@@ -479,7 +479,9 @@ export default {
       presaleSuccess: false,
       presaleValidationError: '',
       presaleContractAddress: null,
+      presaleAddressToken: null, // 缓存的预售地址对应的代币地址
       walletWatcher: null,
+      indexChangeTimeout: null, // 防抖定时器
 
       // 买卖相关数据
       buySellTab: 'buy',
@@ -533,6 +535,9 @@ export default {
   },
 
   mounted() {
+    // 先把 URL 的 search 和 hash 参数规范化同步到 $route 上
+    this.syncUrlParamsToRouter();
+
     this.initializeData();
     this.updateCountdown();
 
@@ -556,14 +561,27 @@ export default {
           const targetIndex = parseInt(newIndex);
           console.log(`🔄 路由索引变化: ${oldIndex} → ${newIndex}`);
 
-          // 只有当新索引与当前本地状态不同时才更新
-          if (targetIndex !== this.currentTokenIndex) {
-            this.currentTokenIndex = targetIndex;
-            console.log(`📊 同步本地索引状态: ${targetIndex}`);
+          // 防抖处理，避免重复加载
+          if (this.indexChangeTimeout) {
+            clearTimeout(this.indexChangeTimeout);
           }
+
+          this.indexChangeTimeout = setTimeout(async () => {
+            // 只有当新索引与当前本地状态不同时才更新
+            if (targetIndex !== this.currentTokenIndex) {
+              console.log(`📊 开始加载索引 ${targetIndex} 的代币...`);
+              try {
+                await this.loadTokenByIndex(targetIndex);
+                console.log(`✅ 索引 ${targetIndex} 加载完成`);
+              } catch (error) {
+                console.error(`❌ 索引 ${targetIndex} 加载失败:`, error);
+                this.$toast(`加载代币失败，请重试`);
+              }
+            }
+          }, 100); // 100ms防抖延迟
         }
       },
-      immediate: false
+      immediate: true // ✅ 修复：设置为true，确保页面初始化时立即响应URL参数
     }
   },
 
@@ -571,6 +589,10 @@ export default {
     // 清理定时器
     if (this.walletWatcher) {
       clearInterval(this.walletWatcher);
+    }
+    // 清理防抖定时器
+    if (this.indexChangeTimeout) {
+      clearTimeout(this.indexChangeTimeout);
     }
   },
 
@@ -617,9 +639,14 @@ export default {
       else if (params.index !== undefined) {
         const targetIndex = parseInt(params.index);
         console.log('📊 使用指定的代币索引:', targetIndex);
-        // 设置初始索引状态
-        this.currentTokenIndex = targetIndex;
-        await this.loadTokenByIndex(targetIndex);
+
+        // ✅ 优化：检查是否已经是目标索引，避免重复加载
+        if (this.currentTokenIndex !== targetIndex) {
+          console.log(`🔄 索引变化: ${this.currentTokenIndex} → ${targetIndex}`);
+          await this.loadTokenByIndex(targetIndex);
+        } else {
+          console.log(`📊 索引未变化，跳过加载: ${targetIndex}`);
+        }
       }
       // 默认加载第0个代币
       else {
@@ -705,8 +732,8 @@ export default {
 
         console.log(`✅ 找到${result.pairs.length}个代币对，使用第7个作为示例`)
 
-        const pair = result.pairs[6]
-        const tokenAddress = AddressUtils.toBase58(pair.tokenAddress || pair[6])
+        const pair = result.pairs[7]
+        const tokenAddress = AddressUtils.toBase58(pair.tokenAddress || pair[7])
         await this.loadTokenByAddress(tokenAddress)
 
       } catch (error) {
@@ -748,7 +775,7 @@ export default {
         }
 
         const pair = result.pairs[index];
-        const tokenAddress = AddressUtils.toBase58(pair.tokenAddress || pair[0]);
+        const tokenAddress = AddressUtils.toBase58(pair.tokenAddress || pair[7]);
 
         console.log(`✅ 加载索引 ${index} 的代币:`, {
           tokenSymbol: pair.tokenSymbol,
@@ -763,6 +790,17 @@ export default {
         this.updateUrlWithIndex(index);
 
         await this.loadTokenByAddress(tokenAddress);
+
+        // 切换代币后重置并重新获取预售信息，确保控制台与按钮指向正确的合约
+        this.presaleContractAddress = null;
+        this.presaleAddressToken = null;
+        try {
+          await this.loadPresaleInfo();
+          await this.updateFundingProgress();
+          console.log('🔁 已根据新代币刷新预售信息与进度');
+        } catch (e) {
+          console.warn('⚠️ 刷新预售信息失败:', e?.message || e);
+        }
 
       } catch (error) {
         console.error('❌ 通过索引加载代币失败:', error);
@@ -782,15 +820,23 @@ export default {
      */
     updateUrlWithIndex(index) {
       try {
-        const url = new URL(window.location.href);
-        url.searchParams.set('index', index.toString());
+        // 使用 Vue Router 更新哈希路由的 query，确保 $route.query 能读取
+        const current = this.$route;
+        const newQuery = { ...current.query, index: index.toString() };
 
-        // 使用pushState更新URL而不刷新页面
-        window.history.pushState({}, '', url.toString());
+        // 保留现有的 params（如 :id），只更新 query
+        this.$router.replace({
+          name: current.name || 'tokenDetail',
+          params: current.params,
+          query: newQuery
+        }).catch(() => {});
 
-        console.log(`📍 URL已更新为索引 ${index}:`, url.toString());
+        console.log('📍 Router query 已更新', {
+          fullPath: this.$route.fullPath,
+          query: this.$route.query
+        });
       } catch (error) {
-        console.warn('⚠️ 更新URL失败:', error);
+        console.warn('⚠️ 更新路由 query 失败:', error);
       }
     },
 
@@ -815,9 +861,10 @@ export default {
           return
         }
 
-        // 缓存有效的预售合约地址，供enterPresale方法使用
+        // 缓存有效的预售合约地址，且关联当前代币地址，供enterPresale方法使用
         this.presaleContractAddress = presaleAddress
-        console.log('💾 预售合约地址已缓存:', presaleAddress)
+        this.presaleAddressToken = this.tokenInfo.contractAddress
+        console.log('💾 预售合约地址已缓存:', presaleAddress, 'for token:', this.presaleAddressToken)
 
         // 2. 从预售合约获取完整配置
         await this.loadPresaleConfigFromContract(presaleAddress)
@@ -838,27 +885,61 @@ export default {
         const tokenDetails = await coordinatorFactoryService.getTokenFullDetails(tokenAddress)
         const presaleAddress = tokenDetails.pair?.presaleAddress
 
-        if (presaleAddress && this.validateAddress(presaleAddress)) {
-          console.log('✅ 成功获取预售地址:', presaleAddress)
-          return presaleAddress
+        if (presaleAddress) {
+          // 转换为 Base58 格式
+          const base58Address = AddressUtils.toBase58(presaleAddress)
+          console.log('🔄 地址格式转换:', {
+            原始地址: presaleAddress,
+            Base58地址: base58Address
+          })
+
+          if (this.validateAddress(base58Address)) {
+            console.log('✅ 成功获取预售地址:', base58Address)
+            return base58Address
+          } else {
+            console.warn('⚠️ 转换后的地址格式无效:', base58Address)
+          }
         }
 
         throw new Error('getTokenFullDetails 返回无效地址')
 
       } catch (error) {
-        console.warn('⚠️ getTokenFullDetails 失败，尝试回退方案:', error.message)
+        console.warn('⚠️ getTokenFullDetails 失败，尝试直接查询方法:', error.message)
 
-        // 方法2：回退到 getAllTokenPresalePairs 获取有效的代币对
-        return await this.getValidTokenPairFromFactory()
+        // 方法2：尝试直接通过 getTokenPresale 获取
+        try {
+          const presaleAddress = await coordinatorFactoryService.getTokenPresale(tokenAddress)
+          if (presaleAddress) {
+            // 转换为 Base58 格式
+            const base58Address = AddressUtils.toBase58(presaleAddress)
+            console.log('🔄 地址格式转换:', {
+              原始地址: presaleAddress,
+              Base58地址: base58Address
+            })
+
+            if (this.validateAddress(base58Address)) {
+              console.log('✅ 通过直接查询获取预售地址:', base58Address)
+              return base58Address
+            } else {
+              console.warn('⚠️ 转换后的地址格式仍然无效:', base58Address)
+            }
+          }
+        } catch (directError) {
+          console.warn('⚠️ 直接查询也失败:', directError.message)
+        }
+
+        // 方法3：最后的回退方案 - 返回null表示没有预售合约
+        console.error('❌ 所有方法都失败，该代币可能没有预售合约')
+        return null
       }
     },
 
-    // 从工厂合约获取有效的代币对作为回退方案
-    async getValidTokenPairFromFactory() {
+    // 从工厂合约查找指定代币的预售合约
+    async findTokenPresaleInFactory(targetTokenAddress) {
       try {
-        console.log('🔄 使用回退方案：从工厂合约获取有效代币对...')
+        console.log('� 在工厂合约中查找指定代币的预售合约:', targetTokenAddress)
 
-        // 首先获取总代币对数量
+        // 获取所有代币对
         const totalPairs = await coordinatorFactoryService.getTotalPairsCreated()
         console.log('📊 工厂合约总代币对数量:', totalPairs)
 
@@ -867,44 +948,33 @@ export default {
           return null
         }
 
-        // 获取所有代币对（使用总数作为limit确保获取完整数据）
         const { pairs } = await coordinatorFactoryService.getAllTokenPresalePairs(0, totalPairs)
-
-        console.log('📋 获取到的代币对数量:', pairs?.length || 0)
-        console.log('📋 预期代币对数量:', totalPairs)
 
         if (!pairs || pairs.length === 0) {
           console.warn('⚠️ 工厂合约返回空的代币对列表')
           return null
         }
 
-        // 验证数据一致性
-        if (pairs.length !== totalPairs) {
-          console.warn(`⚠️ 数据不一致: 获取到${pairs.length}个代币对，但总数为${totalPairs}`)
+        // 查找匹配的代币对
+        const targetPair = pairs.find(pair => {
+          const tokenAddress = AddressUtils.toBase58(pair.tokenAddress || pair[0])
+          return AddressUtils.isEqual(tokenAddress, targetTokenAddress)
+        })
+
+        if (targetPair) {
+          const presaleAddress = AddressUtils.toBase58(targetPair.presaleAddress || targetPair[1])
+          console.log('✅ 找到匹配的代币对:', {
+            tokenAddress: targetTokenAddress,
+            presaleAddress: presaleAddress
+          })
+          return presaleAddress
+        } else {
+          console.log('❌ 在工厂合约中未找到该代币的预售合约')
+          return null
         }
 
-        // 使用第7个有效的代币对
-        const validPair = pairs[6]
-        const presaleAddress = AddressUtils.toBase58(validPair.presaleAddress || validPair[1])
-        const tokenAddress = AddressUtils.toBase58(validPair.tokenAddress || validPair[0])
-
-        console.log('✅ 找到有效代币对:', {
-          tokenAddress,
-          presaleAddress,
-          totalAvailable: pairs.length
-        })
-
-        // 更新当前代币信息为有效的代币
-        await this.loadTokenByAddress(tokenAddress)
-
-        return presaleAddress
-
       } catch (error) {
-        console.error('❌ 回退方案也失败了:', error)
-        console.error('❌ 错误详情:', {
-          message: error.message,
-          stack: error.stack
-        })
+        console.error('❌ 在工厂合约中查找代币失败:', error)
         return null
       }
     },
@@ -1277,13 +1347,76 @@ export default {
 
     // 添加这些新方法
     getUrlParams() {
-      return {
-        tokenId: this.$route.params.id,
-        tokenAddress: this.$route.query.tokenAddress,
-        presaleAddress: this.$route.query.presaleAddress,
-        creator: this.$route.query.creator,
-        index: this.$route.query.index // 添加索引参数支持
-      };
+      const route = this.$route || {};
+      // 1) 优先使用 Vue Router 的 query
+      let index = route.query && route.query.index !== undefined ? route.query.index : undefined;
+      let tokenAddress = route.query && route.query.tokenAddress;
+      let presaleAddress = route.query && route.query.presaleAddress;
+      let creator = route.query && route.query.creator;
+      let tokenId = route.params && route.params.id;
+
+      // 2) 兼容直接访问时 ?index=7 写在哈希前（window.location.search）
+      try {
+        const searchParams = new URLSearchParams(window.location.search || '');
+        if (index === undefined) {
+          const idx = searchParams.get('index');
+          if (idx !== null && idx !== '') index = idx;
+        }
+        if (!tokenAddress) tokenAddress = searchParams.get('tokenAddress') || tokenAddress;
+        if (!presaleAddress) presaleAddress = searchParams.get('presaleAddress') || presaleAddress;
+        if (!creator) creator = searchParams.get('creator') || creator;
+      } catch (e) {
+        console.warn('⚠️ 解析 window.location.search 失败:', e);
+      }
+
+      // 3) 再次兜底解析 hash 内部的 query（一般 $route 已经处理，这里备用）
+      try {
+        const hash = window.location.hash || '';
+        const qIndex = hash.indexOf('?');
+        if (qIndex > -1) {
+          const qs = hash.substring(qIndex + 1);
+          const sp = new URLSearchParams(qs);
+          if (index === undefined) {
+            const idx2 = sp.get('index');
+            if (idx2 !== null && idx2 !== '') index = idx2;
+          }
+          if (!tokenAddress) tokenAddress = sp.get('tokenAddress') || tokenAddress;
+          if (!presaleAddress) presaleAddress = sp.get('presaleAddress') || presaleAddress;
+          if (!creator) creator = sp.get('creator') || creator;
+
+          // 兼容奇怪的 '#/token-detail?4' 形式，没有键名只有值，当作 id 处理
+          if (!tokenId && !sp.has('index') && /^\w+$/.test(qs)) {
+            tokenId = qs;
+          }
+        } else {
+          // 兼容 '#/token-detail/4' 的路径形式由 $route 直接提供 params.id，这里无需处理
+        }
+      } catch (e) {
+        console.warn('⚠️ 解析 window.location.hash 失败:', e);
+      }
+
+      return { tokenId, tokenAddress, presaleAddress, creator, index };
+    },
+
+    // 将 URL 中（无论在 # 前还是 # 后）的 index/id 同步到 Vue Router 的 $route
+    syncUrlParamsToRouter() {
+      try {
+        const { tokenId, index } = this.getUrlParams();
+        const curr = this.$route;
+        const needIndexSync = index !== undefined && curr.query.index !== index;
+        const needIdSync = tokenId && curr.params.id !== tokenId;
+
+        if (needIndexSync || needIdSync) {
+          this.$router.replace({
+            name: curr.name || 'tokenDetail',
+            params: { ...curr.params, id: tokenId || curr.params.id },
+            query: { ...curr.query, ...(index !== undefined ? { index: index.toString() } : {}) }
+          }).catch(() => {});
+          console.log('🔁 已将 URL 参数同步到路由:', { tokenId, index, fullPath: this.$route.fullPath });
+        }
+      } catch (e) {
+        console.warn('⚠️ 同步 URL 参数到路由失败:', e);
+      }
     },
 
     validateAddress(address) {
@@ -1617,9 +1750,9 @@ export default {
     // 获取预售合约地址
     async getPresaleContractAddress() {
       try {
-        // 如果已经缓存了地址，直接返回
-        if (this.presaleContractAddress) {
-          console.log('✅ 使用缓存的预售合约地址:', this.presaleContractAddress);
+        // 如果已经缓存了地址，且与当前代币一致，直接返回
+        if (this.presaleContractAddress && this.presaleAddressToken && this.presaleAddressToken === this.tokenInfo.contractAddress) {
+          console.log('✅ 使用缓存的预售合约地址:', this.presaleContractAddress, 'for token:', this.presaleAddressToken);
           return this.presaleContractAddress;
         }
 
@@ -1638,9 +1771,10 @@ export default {
           throw new Error('获取到的预售合约地址无效');
         }
 
-        // 缓存有效的预售地址
+        // 缓存有效的预售地址，并绑定到当前代币
         this.presaleContractAddress = presaleAddress;
-        console.log('✅ 预售合约地址获取成功:', presaleAddress);
+        this.presaleAddressToken = tokenAddress;
+        console.log('✅ 预售合约地址获取成功:', presaleAddress, 'for token:', tokenAddress);
 
         return presaleAddress;
 
