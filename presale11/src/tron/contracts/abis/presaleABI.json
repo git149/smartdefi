@@ -1695,6 +1695,70 @@
     },
     {
         "inputs": [],
+        "name": "getPresaleUnit",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getTradeUnit",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getPoolData",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "presaleEthAmount_",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "tradeEthAmount_",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "maxTotalNum_",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "presaleMaxNum_",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "coinAmount_",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "stageUnlockRate_",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
         "name": "presaleFinalized",
         "outputs": [
             {

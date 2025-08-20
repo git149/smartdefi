@@ -313,7 +313,7 @@ export default {
         const testAddresses = [
           '415e67db190952e6846760911ee5e9bae7ed0b3210', // 十六进制地址
           'TLsV52sRDL79HXGGm9yzwKibb6BeruhUzy', // Base58地址
-          'TTMTNpZPeaxV9aT3mDuhMT7t6Suu1NtMrc' // 工厂合约地址
+          'TGUUgCztEyXDwEyigoAAZP9HxWC6VdiKDj' // 工厂合约地址
         ]
 
         for (const address of testAddresses) {

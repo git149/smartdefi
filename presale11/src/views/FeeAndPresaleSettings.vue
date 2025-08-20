@@ -31,18 +31,34 @@
           <div class="config-section">
             <!-- Token for LGE(Amount) -->
             <div class="form-group">
-              <label class="form-label">Token for LGE(Amount) *</label>
-              <div class="input-with-suffix">
-                <input
-                  v-model="formData.lgeAmount"
-                  type="text"
-                  placeholder="Ex.210000000"
-                  class="form-input"
-                  :class="{ error: validationErrors.lgeAmount }"
-                  @input="formatLgeAmount"
-                  @blur="validateLgeAmount"
-                />
-                <span class="input-suffix">%</span>
+              <label class="form-label">* Token for LGE (Token amount)</label>
+              <div class="token-input-container">
+                <div class="token-input-field">
+                  <div class="token-icon">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M8 1L9.5 5.5L14 7L9.5 8.5L8 13L6.5 8.5L2 7L6.5 5.5L8 1Z" fill="currentColor"/>
+                    </svg>
+                    <span class="token-name">union</span>
+                  </div>
+                  <div class="token-amount">
+                    <span class="amount-value">{{ formatTokenAmount(formData.lgeAmount) }}</span>
+                  </div>
+                </div>
+                <div class="balance-info">
+                  <span class="balance-text">Balance: {{ formatBalance(tokenConfig.totalSupply) }} MAX</span>
+                  <span class="percentage-used">{{ calculatePercentageUsed() }} ({{ calculatePercentageUsed() }}%)</span>
+                </div>
+                <div class="percentage-buttons">
+                  <button 
+                    v-for="percentage in [10, 25, 50, 75, 'Max']" 
+                    :key="percentage"
+                    class="percentage-btn"
+                    :class="{ active: selectedPercentage === percentage }"
+                    @click="selectPercentage(percentage)"
+                  >
+                    {{ percentage === 'Max' ? 'Max' : percentage + '%' }}
+                  </button>
+                </div>
               </div>
               <small v-if="validationErrors.lgeAmount" class="error-text">{{ validationErrors.lgeAmount }}</small>
             </div>
@@ -298,7 +314,8 @@ export default {
       },
 
       creating: false,
-      error: null
+      error: null,
+      selectedPercentage: 'Max' // 新增：用于存储选中的百分比
     }
   },
   
@@ -316,6 +333,8 @@ export default {
   mounted() {
     // 从路由参数或状态管理中获取代币配置信息
     this.loadTokenConfig()
+    // 初始化百分比选择器
+    this.initializePercentageSelector()
   },
   
   methods: {
@@ -328,6 +347,15 @@ export default {
       if (this.$route.params.tokenConfig) {
         this.tokenConfig = this.$route.params.tokenConfig
         console.log('接收到代币配置:', this.tokenConfig)
+        // 设置默认的LGE数量为总供应量的10%
+        if (this.tokenConfig.totalSupply) {
+          const defaultAmount = (parseFloat(this.tokenConfig.totalSupply) * 0.1).toString();
+          this.formData.lgeAmount = defaultAmount;
+        }
+        // 加载配置后初始化百分比选择器
+        this.$nextTick(() => {
+          this.initializePercentageSelector()
+        })
       } else {
         // 如果没有代币配置，返回到代币创建页面
         this.$router.replace({ name: 'tronExample' })
@@ -345,6 +373,39 @@ export default {
     
     formatMaxBuy() {
       this.formData.maxBuy = this.formData.maxBuy.replace(/[^\d.]/g, '')
+    },
+
+    formatTokenAmount(value) {
+      if (value === '') return '';
+      const num = parseFloat(value);
+      if (isNaN(num)) return '';
+      return num.toLocaleString();
+    },
+
+    formatBalance(totalSupply) {
+      if (!totalSupply) return '0';
+      const num = parseFloat(totalSupply);
+      if (isNaN(num)) return '0';
+      return num.toLocaleString();
+    },
+
+    calculatePercentageUsed() {
+      if (!this.tokenConfig || !this.tokenConfig.totalSupply) return '0';
+      const totalSupply = parseFloat(this.tokenConfig.totalSupply);
+      const lgeAmount = parseFloat(this.formData.lgeAmount);
+      if (isNaN(totalSupply) || isNaN(lgeAmount) || totalSupply === 0) return '0';
+      const percentage = (lgeAmount / totalSupply) * 100;
+      return percentage.toFixed(2);
+    },
+
+    selectPercentage(percentage) {
+      this.selectedPercentage = percentage;
+      if (percentage === 'Max') {
+        this.formData.lgeAmount = this.tokenConfig.totalSupply;
+      } else {
+        this.formData.lgeAmount = (parseFloat(this.tokenConfig.totalSupply) * (percentage / 100)).toString();
+      }
+      this.validateLgeAmount();
     },
     
     // 验证方法
@@ -503,8 +564,8 @@ export default {
 
         // 准备预售配置
         const presaleConfig = {
-          presaleEthAmount: this.formData.rate, // 使用rate作为预售价格
-          tradeEthAmount: Math.floor(parseFloat(this.formData.rate) * 0.5).toString(), // 交易价格为预售价格的50%
+          presaleEthAmount: this.formData.rate, // 预售价格（每TRX可买代币数量）
+          tradeEthAmount: (parseFloat(this.formData.rate) * 0.5).toString(), // 内场交易价格（预售价格的一半）
           maxTotalNum: parseInt(this.formData.maxBuy) || 100,
           presaleMaxNum: Math.floor(parseInt(this.formData.maxBuy) * 0.1) || 10,
           marketDisAmount: this.tokenConfig.totalSupply
@@ -540,6 +601,33 @@ export default {
       this.validateBackingShare()
       this.validateFecShare()
       this.validateDevShare()
+    },
+
+    initializePercentageSelector() {
+      // 在mounted中初始化时，确保selectedPercentage的值与当前的formData.lgeAmount匹配
+      // 这样在用户点击百分比按钮时，selectedPercentage会正确反映当前选中的百分比
+      const currentLgeAmount = parseFloat(this.formData.lgeAmount);
+      const totalSupply = parseFloat(this.tokenConfig?.totalSupply);
+
+      if (totalSupply > 0 && currentLgeAmount > 0) {
+        const percentage = (currentLgeAmount / totalSupply) * 100;
+        // 找到最接近的预设百分比
+        if (percentage >= 100) {
+          this.selectedPercentage = 'Max';
+        } else if (percentage >= 75) {
+          this.selectedPercentage = 75;
+        } else if (percentage >= 50) {
+          this.selectedPercentage = 50;
+        } else if (percentage >= 25) {
+          this.selectedPercentage = 25;
+        } else if (percentage >= 10) {
+          this.selectedPercentage = 10;
+        } else {
+          this.selectedPercentage = 10; // 默认选择10%
+        }
+      } else {
+        this.selectedPercentage = 10; // 如果没有代币配置或总供应量为0，则默认选中10%
+      }
     }
   }
 }
@@ -972,6 +1060,114 @@ export default {
   margin-top: var(--spacing-xs);
   display: block;
   animation: fadeIn 0.2s ease-in-out;
+}
+
+/* Token输入容器样式 */
+.token-input-container {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  transition: all 0.2s ease;
+}
+
+.token-input-container:hover {
+  border-color: var(--panel-border-hover);
+}
+
+.token-input-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.token-icon {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--text-primary);
+}
+
+.token-icon svg {
+  color: var(--accent);
+}
+
+.token-name {
+  font-weight: 600;
+  font-size: var(--font-base);
+}
+
+.token-amount {
+  display: flex;
+  align-items: center;
+}
+
+.amount-value {
+  font-size: var(--font-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.balance-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-md);
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.balance-text {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.percentage-used {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.percentage-buttons {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.percentage-btn {
+  flex: 1;
+  min-width: 60px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.percentage-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.percentage-btn.active {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  border-color: var(--accent);
+  color: white;
+  box-shadow: 0 2px 8px rgba(43, 212, 255, 0.3);
+}
+
+.percentage-btn.active:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(43, 212, 255, 0.4);
 }
 
 /* 动画 */

@@ -478,8 +478,8 @@ export default {
         
         // 准备预售配置
         const presaleConfig = {
-          presaleEthAmount: this.presaleSettings.presaleRate,
-          tradeEthAmount: Math.floor(parseInt(this.presaleSettings.presaleRate) * 0.5).toString(),
+          presaleEthAmount: this.presaleSettings.presaleRate, // 预售价格（每TRX可买代币数量）
+          tradeEthAmount: (parseFloat(this.presaleSettings.presaleRate) * 0.5).toString(), // 内场交易价格（预售价格的一半）
           maxTotalNum: parseInt(this.presaleSettings.maxBuy),
           presaleMaxNum: Math.floor(parseInt(this.presaleSettings.maxBuy) * 0.1),
           marketDisAmount: this.tokenConfig.totalSupply

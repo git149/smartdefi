@@ -25,7 +25,7 @@ class GlobalEventMonitor {
     
     // 配置选项
     this.config = {
-      coordinatorAddress: 'TTMTNpZPeaxV9aT3mDuhMT7t6Suu1NtMrc',
+      coordinatorAddress: 'TGUUgCztEyXDwEyigoAAZP9HxWC6VdiKDj',
       enableAutoStart: true,
       enableConsoleLogging: true,
       loggerOptions: {

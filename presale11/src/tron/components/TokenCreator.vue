@@ -401,16 +401,35 @@
           <section v-else-if="currentStep === 2" class="config-section lge-info">
             <!-- Token for LGE -->
             <div class="form-group">
-              <label class="form-label">Token for LGE *</label>
-              <input
-                v-model="lgeInfo.tokenForLGE"
-                type="text"
-                placeholder="100000"
-                class="form-input"
-                :class="{ error: validationErrors.tokenForLGE }"
-                @input="validateTokenForLGE"
-                @blur="validateTokenForLGE"
-              />
+              <label class="form-label">* Token for LGE (Token amount)</label>
+              <div class="token-input-container">
+                <div class="token-input-field">
+                  <div class="token-icon">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M8 1L9.5 5.5L14 7L9.5 8.5L8 13L6.5 8.5L2 7L6.5 5.5L8 1Z" fill="currentColor"/>
+                    </svg>
+                    <span class="token-name">{{ tokenDetails.symbol || 'union' }}</span>
+                  </div>
+                  <div class="token-amount">
+                    <span class="amount-value">{{ formatTokenAmount(lgeInfo.tokenForLGE) }}</span>
+                  </div>
+                </div>
+                <div class="balance-info">
+                  <span class="balance-text">Balance: {{ formatBalance(tokenDetails.totalSupply) }} MAX</span>
+                  <span class="percentage-used">{{ calculatePercentageUsed() }} ({{ calculatePercentageUsed() }}%)</span>
+                </div>
+                <div class="percentage-buttons">
+                  <button 
+                    v-for="percentage in [10, 25, 50, 75, 'Max']" 
+                    :key="percentage"
+                    class="percentage-btn"
+                    :class="{ active: selectedPercentage === percentage }"
+                    @click="selectPercentage(percentage)"
+                  >
+                    {{ percentage === 'Max' ? 'Max' : percentage + '%' }}
+                  </button>
+                </div>
+              </div>
               <small v-if="validationErrors.tokenForLGE" class="error-text">{{ validationErrors.tokenForLGE }}</small>
               <small v-else class="hint-text">用于LGE的代币数量</small>
             </div>
@@ -758,6 +777,9 @@ export default {
       // 步骤控制
       currentStep: 1,
       maxStep: 2,
+      
+      // 百分比选择器状态
+      selectedPercentage: 10,
 
       // 步骤1：Token详情
       tokenDetails: {
@@ -1074,6 +1096,9 @@ export default {
       this.validateMaxBuy()
       this.validateRate()
       this.validateStartDate()
+      
+      // 初始化百分比选择器
+      this.initializePercentageSelector()
     })
 
     // 添加点击外部关闭下拉框的事件监听
@@ -1874,6 +1899,92 @@ export default {
       }
     },
 
+    // === 百分比选择器相关方法 ===
+    
+    // 选择百分比
+    selectPercentage(percentage) {
+      this.selectedPercentage = percentage;
+      if (percentage === 'Max') {
+        this.lgeInfo.tokenForLGE = this.tokenDetails.totalSupply;
+      } else {
+        const totalSupply = parseFloat(this.tokenDetails.totalSupply.replace(/[^\d]/g, ''));
+        this.lgeInfo.tokenForLGE = (totalSupply * percentage / 100).toString();
+      }
+      this.validateTokenForLGE();
+    },
+
+    // 格式化代币数量显示
+    formatTokenAmount(value) {
+      if (!value) return '0.00';
+      const num = parseFloat(value.toString().replace(/[^\d]/g, ''));
+      if (isNaN(num)) return '0.00';
+      
+      if (num >= 1000000000) {
+        return (num / 1000000000).toFixed(2) + 'B';
+      } else if (num >= 1000000) {
+        return (num / 1000000).toFixed(2) + 'M';
+      } else if (num >= 1000) {
+        return (num / 1000).toFixed(2) + 'K';
+      }
+      return num.toLocaleString();
+    },
+
+    // 格式化余额显示
+    formatBalance(totalSupply) {
+      if (!totalSupply) return '0';
+      const num = parseFloat(totalSupply.toString().replace(/[^\d]/g, ''));
+      if (isNaN(num)) return '0';
+      
+      if (num >= 1000000000) {
+        return (num / 1000000000).toFixed(2) + 'B';
+      } else if (num >= 1000000) {
+        return (num / 1000000).toFixed(2) + 'M';
+      } else if (num >= 1000) {
+        return (num / 1000).toFixed(2) + 'K';
+      }
+      return num.toLocaleString();
+    },
+
+    // 计算已使用百分比
+    calculatePercentageUsed() {
+      if (!this.tokenDetails.totalSupply || !this.lgeInfo.tokenForLGE) return '0.00';
+      
+      const totalSupply = parseFloat(this.tokenDetails.totalSupply.replace(/[^\d]/g, ''));
+      const tokenForLGE = parseFloat(this.lgeInfo.tokenForLGE.toString().replace(/[^\d]/g, ''));
+      
+      if (isNaN(totalSupply) || isNaN(tokenForLGE) || totalSupply === 0) return '0.00';
+      
+      const percentage = (tokenForLGE / totalSupply) * 100;
+      return percentage.toFixed(2);
+    },
+
+    // 初始化百分比选择器
+    initializePercentageSelector() {
+      if (this.tokenDetails.totalSupply && this.lgeInfo.tokenForLGE) {
+        const totalSupply = parseFloat(this.tokenDetails.totalSupply.replace(/[^\d]/g, ''));
+        const tokenForLGE = parseFloat(this.lgeInfo.tokenForLGE.toString().replace(/[^\d]/g, ''));
+        
+        if (totalSupply > 0 && tokenForLGE > 0) {
+          const percentage = (tokenForLGE / totalSupply) * 100;
+          
+          // 找到最接近的预设百分比
+          if (percentage >= 100) {
+            this.selectedPercentage = 'Max';
+          } else if (percentage >= 75) {
+            this.selectedPercentage = 75;
+          } else if (percentage >= 50) {
+            this.selectedPercentage = 50;
+          } else if (percentage >= 25) {
+            this.selectedPercentage = 25;
+          } else if (percentage >= 10) {
+            this.selectedPercentage = 10;
+          } else {
+            this.selectedPercentage = 10;
+          }
+        }
+      }
+    },
+
     // === 时间处理方法 ===
 
     onStartDateChange() {
@@ -2019,12 +2130,9 @@ export default {
           return '0'
         }
 
-        // 使用BigInt进行大数运算，避免科学计数法
-        const bigIntValue = BigInt(cleanValue)
-        const decimals = BigInt('1000000000000000000') // 10^18
-        const result = bigIntValue * decimals
-
-        return result.toString()
+        // 转换为SUN单位 (1 TRX = 1,000,000 SUN)
+        const sunValue = Math.floor(numValue * 1000000)
+        return sunValue.toString()
       } catch (error) {
         console.error('数值转换错误:', error, 'input:', value)
         return '0'
@@ -2158,11 +2266,11 @@ export default {
 
         // 根据LGE信息配置预售参数
         const presaleConfig = {
-          presaleEthAmount: this.safeToWei(this.lgeInfo.tokenForLGE), // Token amount for LGE
-          tradeEthAmount: this.safeToWei(this.lgeInfo.rate),          // Rate (tokens per TRX)
-          maxTotalNum: Number(this.lgeInfo.hardCap),                  // Hard cap
-          presaleMaxNum: Number(this.lgeInfo.maxBuy),                 // Max buy per wallet
-          marketDisAmount: tokenConfig.totalSupply,                   // 使用总供应量
+          presaleEthAmount: this.safeToWei(this.lgeInfo.rate),                    // 预售价格（每TRX可买代币数量）
+          tradeEthAmount: this.safeToWei((parseFloat(this.lgeInfo.rate) * 0.5).toString()), // 内场交易价格（预售价格的一半）
+          maxTotalNum: Number(this.lgeInfo.hardCap),                              // Hard cap
+          presaleMaxNum: Number(this.lgeInfo.maxBuy),                             // Max buy per wallet
+          marketDisAmount: this.lgeInfo.tokenForLGE,                             // 使用LGE代币数量
           // LP分配参数
           userLPShare: Math.round((100 - this.lgeInfo.devShare) * 100), // 用户LP份额（基点）
           devLPShare: Math.round(this.lgeInfo.devShare * 100),          // 开发团队LP份额（基点）
@@ -5547,4 +5655,115 @@ export default {
     font-size: 15px;
   }
 }
+
+/* Token输入容器样式 */
+.token-input-container {
+  background: rgba(19, 24, 33, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+  transition: all 0.2s ease;
+}
+
+.token-input-container:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.token-input-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.token-icon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #E6EDF3;
+}
+
+.token-icon svg {
+  color: #2BD4FF;
+}
+
+.token-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: #E6EDF3;
+}
+
+.token-amount {
+  display: flex;
+  align-items: center;
+}
+
+.amount-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #E6EDF3;
+}
+
+.balance-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  font-size: 12px;
+  color: #8A93A1;
+}
+
+.balance-text {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.percentage-used {
+  color: #E6EDF3;
+  font-weight: 500;
+}
+
+.percentage-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.percentage-btn {
+  flex: 1;
+  min-width: 60px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: transparent;
+  color: #8A93A1;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.percentage-btn:hover {
+  border-color: #2BD4FF;
+  color: #2BD4FF;
+}
+
+.percentage-btn.active {
+  background: linear-gradient(135deg, #6E7CFF, #2BD4FF);
+  border-color: #2BD4FF;
+  color: white;
+  box-shadow: 0 2px 8px rgba(43, 212, 255, 0.3);
+}
+
+.percentage-btn.active:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(43, 212, 255, 0.4);
+}
+
+
 </style>

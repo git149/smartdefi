@@ -54,7 +54,7 @@ class PresaleService extends BaseContractService {
   async trade(options = {}) {
     try {
       console.log('🔄 进行交易...')
-      
+
       return await this.sendTransaction('trade', [], options)
     } catch (error) {
       console.error('❌ 交易失败:', error)
@@ -72,7 +72,7 @@ class PresaleService extends BaseContractService {
   async sellTokens(amount) {
     try {
       console.log('💸 出售代币:', amount)
-      
+
       return await this.sendTransaction('sellToken', [amount])
     } catch (error) {
       console.error('❌ 出售代币失败:', error)
@@ -97,7 +97,7 @@ class PresaleService extends BaseContractService {
    */
   async getUserPresaleInfo(userAddress) {
     const result = await this.callMethod('preSaleAddress', [userAddress])
-    
+
     return {
       user: result.user || result[0],
       preSaleCount: result.preSaleCount || result[1],
@@ -138,7 +138,7 @@ class PresaleService extends BaseContractService {
    */
   async getMarketPrice() {
     const result = await this.callMethod('getMarketPrice')
-    
+
     return {
       tokenPrice: result.tokenPrice || result[0],
       marketCap: result.marketCap || result[1]
@@ -165,7 +165,7 @@ class PresaleService extends BaseContractService {
   async setUserVerify(userAddress, verify, options = {}) {
     try {
       console.log('✅ 设置用户验证状态:', userAddress, verify)
-      
+
       return await this.sendTransaction('setVerify', [userAddress, verify], options)
     } catch (error) {
       console.error('❌ 设置用户验证状态失败:', error)
@@ -180,7 +180,7 @@ class PresaleService extends BaseContractService {
   async finalizePresaleAndAddLiquidity() {
     try {
       console.log('🏁 完成预售并添加流动性...')
-      
+
       return await this.sendTransaction('finalizePresaleAndAddLiquidity')
     } catch (error) {
       console.error('❌ 完成预售失败:', error)
@@ -194,7 +194,7 @@ class PresaleService extends BaseContractService {
    */
   async getFinalizationStatus() {
     const result = await this.callMethod('getFinalizationStatus')
-    
+
     return {
       isFinalized: result.isFinalized || result[0],
       autoEnabled: result.autoEnabled || result[1],
@@ -372,20 +372,28 @@ class PresaleService extends BaseContractService {
    */
   async getPresalePriceInfo() {
     try {
+      // 使用更可靠的 getPoolData 方法
+      const poolData = await this.callMethod('getPoolData')
+      
+      // getPoolData 返回数组: [presaleEthAmount_, tradeEthAmount_, maxTotalNum_, presaleMaxNum_, coinAmount_, stageUnlockRate_]
       const [
-        insidePrice,
-        marketPrice
-      ] = await this.batchCall([
-        { method: 'getInsidePrice' },
-        { method: 'getMarketPrice' }
-      ])
+        preSaleEthAmount,
+        tradeEthAmount,
+        maxTotalNum,
+        presaleMaxNum,
+        coinAmount,
+        stageUnlockRate
+      ] = poolData
 
       return {
-        preSaleEthAmount: insidePrice, // 预售价格 (TRX)
-        tradeEthAmount: insidePrice, // 交易价格 (TRX)
-        coinAmount: 1, // 每TRX可购买的代币数量
-        tokenPrice: marketPrice.tokenPrice || marketPrice[0],
-        marketCap: marketPrice.marketCap || marketPrice[1]
+        preSaleEthAmount: preSaleEthAmount, // 预售价格 (TRX)
+        tradeEthAmount: tradeEthAmount, // 交易价格 (TRX)
+        coinAmount: coinAmount, // 每TRX可购买的代币数量
+        maxTotalNum: maxTotalNum, // 最大总量
+        presaleMaxNum: presaleMaxNum, // 预售最大数量
+        stageUnlockRate: stageUnlockRate, // 阶段解锁比例
+        tokenPrice: 'N/A', // 暂时不提供
+        marketCap: 'N/A' // 暂时不提供
       }
     } catch (error) {
       console.error('❌ 获取预售价格信息失败:', error)
@@ -652,8 +660,8 @@ class PresaleService extends BaseContractService {
       ])
 
       const canUnlock = presaleStatus >= 2 && // 预售已结束
-                       unlockProgress.remainingToUnlock > 0 && // 还有代币可解锁
-                       unlockProgress.currentStageUnlockable > unlockProgress.alreadyUnlocked // 当前阶段有可解锁的代币
+        unlockProgress.remainingToUnlock > 0 && // 还有代币可解锁
+        unlockProgress.currentStageUnlockable > unlockProgress.alreadyUnlocked // 当前阶段有可解锁的代币
 
       return {
         canUnlock,
@@ -741,20 +749,36 @@ class PresaleService extends BaseContractService {
   async getPresaleConfig() {
     try {
       console.log('🔍 获取预售基础配置...')
-      const result = await this.callMethod('preSale')
-
+      const r = await this.callMethod('getPoolData')
+      const arr = Array.isArray(r) ? r : [r.presaleEthAmount_, r.tradeEthAmount_, r.maxTotalNum_, r.presaleMaxNum_, r.coinAmount_, r.stageUnlockRate_]
       return {
-        preSaleEthAmount: result.preSaleEthAmount || result[0],
-        preSaleMaxNum: result.preSaleMaxNum || result[1],
-        totalNumber: result.totalNumber || result[2],
-        verify: result.verify || result[3]
+        preSaleEthAmount: arr[0],
+        preSaleMaxNum: arr[3],
+        totalNumber: arr[2],
+        coinAmount: arr[4],
+        stageUnlockRate: arr[5],
+        tradeEthAmount: arr[1]
       }
     } catch (error) {
       console.error('❌ 获取预售基础配置失败:', error)
       throw error
     }
   }
-
+  async getPresaleUnit() {
+  return await this.callMethod('getPresaleUnit')
+}
+async getPresaleConfig() {
+  const r = await this.callMethod('getPoolData')
+  const a = Array.isArray(r) ? r : [r[0],r[1],r[2],r[3],r[4],r[5]]
+  return {
+    preSaleEthAmount: a[0],
+    tradeEthAmount:  a[1],
+    maxTotalNum:     a[2],
+    preSaleMaxNum:   a[3],
+    coinAmount:      a[4],
+    stageUnlockRate: a[5],
+  }
+}
   /**
    * 获取交易配置信息
    * @returns {Promise<Object>} 交易配置

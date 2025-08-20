@@ -537,6 +537,14 @@ export default {
   mounted() {
     // 先把 URL 的 search 和 hash 参数规范化同步到 $route 上
     this.syncUrlParamsToRouter();
+    
+    // 添加调试：检查 tokenInfo 的初始状态
+    console.log('🔍 页面加载时 tokenInfo 状态:', {
+      tokenForLGE: this.tokenInfo.tokenForLGE,
+      hardCap: this.tokenInfo.hardCap,
+      maxBuy: this.tokenInfo.maxBuy,
+      完整对象: this.tokenInfo
+    });
 
     this.initializeData();
     this.updateCountdown();
@@ -554,6 +562,18 @@ export default {
   },
 
   watch: {
+    // 监听 tokenForLGE 的变化
+    'tokenInfo.tokenForLGE': {
+      handler(newVal, oldVal) {
+        console.log('🔍 tokenForLGE 发生变化:', {
+          旧值: oldVal,
+          新值: newVal,
+          变化时间: new Date().toLocaleString()
+        });
+      },
+      immediate: true
+    },
+
     // 监听路由查询参数变化
     '$route.query.index': {
       handler(newIndex, oldIndex) {
@@ -1139,7 +1159,18 @@ export default {
         // 从预售配置映射字段
         if (presaleConfig) {
           try {
+            console.log('🔍 预售配置对象详情:', {
+              完整对象: presaleConfig,
+              preSaleMaxNum: presaleConfig.preSaleMaxNum,
+              preSaleEthAmount: presaleConfig.preSaleEthAmount,
+              preSaleMaxNum类型: typeof presaleConfig.preSaleMaxNum,
+              所有属性: Object.keys(presaleConfig),
+              预售配置JSON: JSON.stringify(presaleConfig, null, 2)
+            })
+            
             const presaleUpdates = this.mapPresaleConfig(presaleConfig)
+            console.log('🔍 预售配置映射结果:', presaleUpdates)
+            
             Object.assign(updates, presaleUpdates)
             successfulMappings++
             console.log('✅ 预售配置映射成功')
@@ -1162,8 +1193,38 @@ export default {
 
         // 只有在成功映射至少一个配置时才更新
         if (successfulMappings > 0) {
+          console.log('🔍 更新前的 tokenInfo.tokenForLGE:', this.tokenInfo.tokenForLGE)
+          console.log('🔍 即将应用的更新:', JSON.stringify(updates, null, 2))
           this.tokenInfo = { ...this.tokenInfo, ...updates }
-          console.log(`✅ 配置数据映射完成，成功映射 ${successfulMappings} 个配置:`, updates)
+          
+          // 检查硬顶和最大购买量是否正确格式化
+          if (this.tokenInfo.hardCap && this.tokenInfo.hardCap.includes('1000000000.00M')) {
+            console.log('🔍 硬顶值:', this.tokenInfo.hardCap)
+          }
+          
+          if (this.tokenInfo.maxBuy && this.tokenInfo.maxBuy.includes('100000000.00M')) {
+            console.log('🔍 最大购买量值:', this.tokenInfo.maxBuy)
+          }
+          
+          // 检查 Token for LGE 是否正确设置
+          if (this.tokenInfo.tokenForLGE === '0' || this.tokenInfo.tokenForLGE === 0) {
+            console.warn('⚠️ 检测到 Token for LGE 为 0，尝试强制设置')
+            console.log('🔍 当前 tokenInfo.tokenForLGE:', this.tokenInfo.tokenForLGE)
+            console.log('🔍 预售配置更新中的 tokenForLGE:', updates.tokenForLGE)
+            console.log('🔍 预售配置更新完整内容:', JSON.stringify(updates, null, 2))
+            
+            // 如果预售配置中有 tokenForLGE，强制应用
+            if (updates.tokenForLGE && updates.tokenForLGE !== '0') {
+              console.log('🔧 强制应用预售配置中的 tokenForLGE:', updates.tokenForLGE)
+              this.tokenInfo.tokenForLGE = updates.tokenForLGE
+              console.log('🔧 强制应用后的 tokenInfo.tokenForLGE:', this.tokenInfo.tokenForLGE)
+            } else {
+              console.warn('⚠️ 预售配置更新中没有有效的 tokenForLGE 值')
+            }
+          }
+          
+          console.log('🔍 更新后的 tokenInfo.tokenForLGE:', this.tokenInfo.tokenForLGE)
+          console.log(`✅ 配置数据映射完成，成功映射 ${successfulMappings} 个配置`)
         } else {
           console.warn('⚠️ 没有成功映射任何配置，保持默认值')
         }
@@ -1192,7 +1253,13 @@ export default {
 
       if (lgeConfig.hardcap) {
         console.log(`🎯 处理硬顶数据: ${lgeConfig.hardcap} (类型: ${typeof lgeConfig.hardcap})`)
-        const formattedHardCap = this.formatTrxAmount(lgeConfig.hardcap)
+        console.log(`🔍 硬顶原始值详情:`, {
+          原始值: lgeConfig.hardcap,
+          类型: typeof lgeConfig.hardcap,
+          是否为数字: !isNaN(Number(lgeConfig.hardcap)),
+          数值: Number(lgeConfig.hardcap)
+        })
+        const formattedHardCap = this.formatTrxAmount(lgeConfig.hardcap, true) // 标记为硬顶
         updates.hardCap = formattedHardCap
         console.log(`🎯 硬顶格式化结果: ${formattedHardCap}`)
         // 自动计算软顶（硬顶的1/3）
@@ -1201,7 +1268,13 @@ export default {
 
       if (lgeConfig.maxBuyPerWallet) {
         console.log(`💰 处理最大购买数据: ${lgeConfig.maxBuyPerWallet} (类型: ${typeof lgeConfig.maxBuyPerWallet})`)
-        const formattedMaxBuy = this.formatTrxAmount(lgeConfig.maxBuyPerWallet)
+        console.log(`🔍 最大购买原始值详情:`, {
+          原始值: lgeConfig.maxBuyPerWallet,
+          类型: typeof lgeConfig.maxBuyPerWallet,
+          是否为数字: !isNaN(Number(lgeConfig.maxBuyPerWallet)),
+          数值: Number(lgeConfig.maxBuyPerWallet)
+        })
+        const formattedMaxBuy = this.formatTrxAmount(lgeConfig.maxBuyPerWallet, true) // 标记为最大购买量
         updates.maxBuy = formattedMaxBuy
         console.log(`💰 最大购买格式化结果: ${formattedMaxBuy}`)
       }
@@ -1243,13 +1316,31 @@ export default {
     mapPresaleConfig(presaleConfig) {
       const updates = {}
 
-      if (presaleConfig.preSaleMaxNum) {
+      console.log('🔍 预售配置原始数据:', {
+        preSaleMaxNum: presaleConfig.preSaleMaxNum,
+        preSaleEthAmount: presaleConfig.preSaleEthAmount,
+        preSaleMaxNum类型: typeof presaleConfig.preSaleMaxNum
+      })
+
+      if (presaleConfig.preSaleMaxNum !== undefined && presaleConfig.preSaleMaxNum !== null) {
         // 使用默认的18位decimals，因为这里没有具体的decimals信息
+        console.log(`🔍 处理 preSaleMaxNum: ${presaleConfig.preSaleMaxNum} (类型: ${typeof presaleConfig.preSaleMaxNum})`)
+        console.log(`🔍 preSaleMaxNum 数值检查:`, {
+          值: presaleConfig.preSaleMaxNum,
+          类型: typeof presaleConfig.preSaleMaxNum,
+          是否为BigInt: typeof presaleConfig.preSaleMaxNum === 'bigint',
+          转换为字符串: presaleConfig.preSaleMaxNum.toString(),
+          转换为数字: Number(presaleConfig.preSaleMaxNum)
+        })
+        
         updates.tokenForLGE = this.formatTokenAmount(presaleConfig.preSaleMaxNum, 18)
+        console.log(`🔍 tokenForLGE 格式化结果: ${updates.tokenForLGE}`)
+      } else {
+        console.warn('⚠️ preSaleMaxNum 为空或未定义')
       }
 
       if (presaleConfig.preSaleEthAmount) {
-        updates.minBuy = this.formatTrxAmount(presaleConfig.preSaleEthAmount)
+        updates.minBuy = this.formatTrxAmount(presaleConfig.preSaleEthAmount, false, true)
       }
 
       // 注意：软顶现在在 mapLGEConfig 中自动计算，无需在此处重复计算
@@ -1348,6 +1439,13 @@ export default {
     // 添加这些新方法
     getUrlParams() {
       const route = this.$route || {};
+      console.log('🔍 解析路由参数:', {
+        route: route,
+        fullPath: route.fullPath,
+        query: route.query,
+        params: route.params
+      });
+
       // 1) 优先使用 Vue Router 的 query
       let index = route.query && route.query.index !== undefined ? route.query.index : undefined;
       let tokenAddress = route.query && route.query.tokenAddress;
@@ -1355,64 +1453,115 @@ export default {
       let creator = route.query && route.query.creator;
       let tokenId = route.params && route.params.id;
 
-      // 2) 兼容直接访问时 ?index=7 写在哈希前（window.location.search）
-      try {
-        const searchParams = new URLSearchParams(window.location.search || '');
-        if (index === undefined) {
-          const idx = searchParams.get('index');
-          if (idx !== null && idx !== '') index = idx;
-        }
-        if (!tokenAddress) tokenAddress = searchParams.get('tokenAddress') || tokenAddress;
-        if (!presaleAddress) presaleAddress = searchParams.get('presaleAddress') || presaleAddress;
-        if (!creator) creator = searchParams.get('creator') || creator;
-      } catch (e) {
-        console.warn('⚠️ 解析 window.location.search 失败:', e);
-      }
-
-      // 3) 再次兜底解析 hash 内部的 query（一般 $route 已经处理，这里备用）
-      try {
-        const hash = window.location.hash || '';
-        const qIndex = hash.indexOf('?');
-        if (qIndex > -1) {
-          const qs = hash.substring(qIndex + 1);
-          const sp = new URLSearchParams(qs);
+      // 2) 如果 Vue Router 没有解析到查询参数，尝试手动解析 URL
+      if (index === undefined || !tokenAddress) {
+        try {
+          // 解析完整的 URL，包括哈希部分
+          const fullUrl = window.location.href;
+          const url = new URL(fullUrl);
+          
+          // 检查哈希中的查询参数
+          const hash = url.hash || '';
+          if (hash.includes('?')) {
+            const hashQuery = hash.split('?')[1];
+            const hashParams = new URLSearchParams(hashQuery);
+            
+            if (index === undefined) {
+              const hashIndex = hashParams.get('index');
+              if (hashIndex !== null && hashIndex !== '') {
+                index = hashIndex;
+                console.log('🔍 从哈希查询参数解析到 index:', index);
+              }
+            }
+            
+            if (!tokenAddress) {
+              const hashTokenAddress = hashParams.get('tokenAddress');
+              if (hashTokenAddress) {
+                tokenAddress = hashTokenAddress;
+                console.log('🔍 从哈希查询参数解析到 tokenAddress:', tokenAddress);
+              }
+            }
+            
+            if (!presaleAddress) {
+              const hashPresaleAddress = hashParams.get('presaleAddress');
+              if (hashPresaleAddress) {
+                presaleAddress = hashPresaleAddress;
+              }
+            }
+            
+            if (!creator) {
+              const hashCreator = hashParams.get('creator');
+              if (hashCreator) {
+                creator = hashCreator;
+              }
+            }
+          }
+          
+          // 检查 URL 搜索参数（哈希前的部分）
           if (index === undefined) {
-            const idx2 = sp.get('index');
-            if (idx2 !== null && idx2 !== '') index = idx2;
+            const searchIndex = url.searchParams.get('index');
+            if (searchIndex !== null && searchIndex !== '') {
+              index = searchIndex;
+              console.log('🔍 从 URL 搜索参数解析到 index:', index);
+            }
           }
-          if (!tokenAddress) tokenAddress = sp.get('tokenAddress') || tokenAddress;
-          if (!presaleAddress) presaleAddress = sp.get('presaleAddress') || presaleAddress;
-          if (!creator) creator = sp.get('creator') || creator;
-
-          // 兼容奇怪的 '#/token-detail?4' 形式，没有键名只有值，当作 id 处理
-          if (!tokenId && !sp.has('index') && /^\w+$/.test(qs)) {
-            tokenId = qs;
+          
+          if (!tokenAddress) {
+            const searchTokenAddress = url.searchParams.get('tokenAddress');
+            if (searchTokenAddress) {
+              tokenAddress = searchTokenAddress;
+              console.log('🔍 从 URL 搜索参数解析到 tokenAddress:', tokenAddress);
+            }
           }
-        } else {
-          // 兼容 '#/token-detail/4' 的路径形式由 $route 直接提供 params.id，这里无需处理
+          
+        } catch (e) {
+          console.warn('⚠️ 解析 URL 参数失败:', e);
         }
-      } catch (e) {
-        console.warn('⚠️ 解析 window.location.hash 失败:', e);
       }
 
+      console.log('📋 最终解析的参数:', { tokenId, tokenAddress, presaleAddress, creator, index });
       return { tokenId, tokenAddress, presaleAddress, creator, index };
     },
 
     // 将 URL 中（无论在 # 前还是 # 后）的 index/id 同步到 Vue Router 的 $route
     syncUrlParamsToRouter() {
       try {
-        const { tokenId, index } = this.getUrlParams();
+        const { tokenId, index, tokenAddress, presaleAddress, creator } = this.getUrlParams();
         const curr = this.$route;
+        
+        // 检查是否需要同步各种参数
         const needIndexSync = index !== undefined && curr.query.index !== index;
         const needIdSync = tokenId && curr.params.id !== tokenId;
+        const needTokenAddressSync = tokenAddress && curr.query.tokenAddress !== tokenAddress;
+        const needPresaleAddressSync = presaleAddress && curr.query.presaleAddress !== presaleAddress;
+        const needCreatorSync = creator && curr.query.creator !== creator;
 
-        if (needIndexSync || needIdSync) {
+        if (needIndexSync || needIdSync || needTokenAddressSync || needPresaleAddressSync || needCreatorSync) {
+          // 构建新的查询参数
+          const newQuery = { ...curr.query };
+          if (index !== undefined) newQuery.index = index.toString();
+          if (tokenAddress) newQuery.tokenAddress = tokenAddress;
+          if (presaleAddress) newQuery.presaleAddress = presaleAddress;
+          if (creator) newQuery.creator = creator;
+
+          // 构建新的路径参数
+          const newParams = { ...curr.params };
+          if (tokenId) newParams.id = tokenId;
+
           this.$router.replace({
             name: curr.name || 'tokenDetail',
-            params: { ...curr.params, id: tokenId || curr.params.id },
-            query: { ...curr.query, ...(index !== undefined ? { index: index.toString() } : {}) }
+            params: newParams,
+            query: newQuery
           }).catch(() => {});
-          console.log('🔁 已将 URL 参数同步到路由:', { tokenId, index, fullPath: this.$route.fullPath });
+          
+          console.log('🔁 已将 URL 参数同步到路由:', { 
+            tokenId, 
+            index, 
+            tokenAddress,
+            presaleAddress,
+            creator,
+            fullPath: this.$route.fullPath 
+          });
         }
       } catch (e) {
         console.warn('⚠️ 同步 URL 参数到路由失败:', e);
@@ -2000,6 +2149,18 @@ export default {
         window.presaleAdmin = {
           // 查询预售状态
           getStatus: this.consoleGetPresaleStatus.bind(this),
+          // 查询预售价格
+          getPrice: this.consoleGetPresalePrice.bind(this),
+          // 直接查询 preSaleEthAmount
+          getPreSaleEthAmount: this.consoleGetPreSaleEthAmount.bind(this),
+          // 查询详细预售信息
+          getDetailedInfo: this.consoleGetDetailedPresaleInfo.bind(this),
+          // 查询用户预售记录
+          getUserInfo: this.consoleGetUserPresaleInfo.bind(this),
+          // 查询预售总览
+          getTotalInfo: this.consoleGetTotalPresaleInfo.bind(this),
+          // 查询指定地址
+          checkAddress: this.consoleCheckAddress.bind(this),
           // 开启预售
           start: this.consoleStartPresale.bind(this),
           // 结束预售
@@ -2012,6 +2173,12 @@ export default {
 
         console.log('🎮 预售管理控制台已激活！');
         console.log('📖 输入 presaleAdmin.help() 查看可用命令');
+        
+        // 添加全局快捷命令
+        window.checkTotal = this.consoleGetTotalPresaleInfo.bind(this);
+        window.checkAddress = this.consoleCheckAddress.bind(this);
+        console.log('💡 输入 checkTotal() 快速查询预售总览');
+        console.log('💡 输入 checkAddress("地址") 查询指定地址的预售信息');
 
       } catch (error) {
         console.error('❌ 注册控制台命令失败:', error);
@@ -2038,6 +2205,12 @@ export default {
 
 📊 查询命令：
   presaleAdmin.getStatus()     - 查询当前预售状态
+  presaleAdmin.getPrice()      - 查询预售价格 (preSaleEthAmount)
+  presaleAdmin.getPreSaleEthAmount() - 直接查询 preSaleEthAmount 存储变量
+  presaleAdmin.getDetailedInfo() - 查询详细预售信息和配置
+  presaleAdmin.getUserInfo()   - 查询用户预售记录 (preSaleAddress mapping)
+  presaleAdmin.getTotalInfo()  - 查询预售总览信息
+  presaleAdmin.checkAddress()  - 查询指定地址的预售信息
   presaleAdmin.checkOwner()    - 检查当前钱包是否为管理员
 
 🎛️ 管理命令（仅管理员）：
@@ -2088,6 +2261,298 @@ export default {
       }
     },
 
+    // 控制台命令：查询预售价格
+    async consoleGetPresalePrice() {
+      try {
+        console.log('💰 正在查询预售价格...');
+
+        const presaleAddress = await this.getPresaleContractAddress();
+        if (!presaleAddress) {
+          console.error('❌ 无法获取预售合约地址');
+          return;
+        }
+
+        const presaleService = new PresaleService(presaleAddress);
+        
+        // 尝试多种方式获取预售价格
+        let priceInfo = null;
+        let error = null;
+        
+        // 方法1：尝试调用 getPresalePriceInfo
+        try {
+          priceInfo = await presaleService.getPresalePriceInfo();
+          console.log('✅ 通过 getPresalePriceInfo 获取价格成功');
+        } catch (err) {
+          console.warn('⚠️ getPresalePriceInfo 调用失败，尝试直接读取存储变量');
+          error = err;
+        }
+        
+        // 方法2：如果方法1失败，尝试直接读取存储变量
+        if (!priceInfo) {
+          try {
+            console.log('🔍 尝试直接读取预售价格存储变量...');
+            
+            // 直接调用合约的 preSaleEthAmount_ 存储变量
+            const preSaleEthAmount = await presaleService.callMethod('preSaleEthAmount_');
+            const tradeEthAmount = await presaleService.callMethod('tradeEthAmount_');
+            const coinAmount = await presaleService.callMethod('coinAmount_');
+            
+            priceInfo = {
+              preSaleEthAmount: preSaleEthAmount,
+              tradeEthAmount: tradeEthAmount,
+              coinAmount: coinAmount,
+              tokenPrice: 'N/A',
+              marketCap: 'N/A'
+            };
+            
+            console.log('✅ 通过直接读取存储变量获取价格成功');
+          } catch (directErr) {
+            console.error('❌ 直接读取存储变量也失败:', directErr);
+            throw new Error(`无法获取预售价格信息。错误1: ${error?.message}, 错误2: ${directErr?.message}`);
+          }
+        }
+
+        // 修复：正确处理单位转换和BigInt类型
+        const preSaleEthAmount = priceInfo.preSaleEthAmount;
+        const coinAmount = priceInfo.coinAmount;
+        
+        // 处理BigInt类型，转换为字符串后再转换为数字
+        const preSaleEthAmountNum = typeof preSaleEthAmount === 'bigint' 
+          ? parseFloat(preSaleEthAmount.toString()) 
+          : parseFloat(preSaleEthAmount);
+        const coinAmountNum = typeof coinAmount === 'bigint' 
+          ? parseFloat(coinAmount.toString()) 
+          : parseFloat(coinAmount);
+        
+        // 合约中存储的是SUN单位，需要转换为TRX单位
+        const preSaleEthAmountInTrx = preSaleEthAmountNum / 1000000; // SUN -> TRX
+        const coinAmountInTrx = coinAmountNum / 1000000; // SUN -> TRX
+        
+        // 重新理解变量含义：
+        // preSaleEthAmount: 预售价格（以SUN为单位）
+        // coinAmount: 总代币数量（以SUN为单位）
+        // 预售价格 = preSaleEthAmountInTrx TRX（动态获取）
+        // 每TRX可买代币数量 = coinAmountInTrx / preSaleEthAmountInTrx
+        
+        // 格式化显示
+        const preSaleEthAmountFormatted = this.formatTrxAmount(preSaleEthAmount, false, true);
+        const coinAmountFormatted = this.formatTrxAmount(coinAmount, false, false);
+
+        // 计算每TRX可买到的代币数量
+        const tokensPerTrx = coinAmountInTrx / preSaleEthAmountInTrx;
+        
+        console.log(`
+💰 预售价格查询结果
+═══════════════════════════════════════
+🏷️  合约地址: ${presaleAddress}
+💎  预售价格: ${preSaleEthAmountInTrx.toFixed(6)} TRX (动态获取)
+📊  预售价格(SUN): ${preSaleEthAmount}
+🔄  预售价格(TRX): ${preSaleEthAmountInTrx.toFixed(6)} TRX
+🪙  总代币数量(SUN): ${coinAmount}
+🔄  总代币数量(TRX): ${coinAmountInTrx.toFixed(6)} 个
+💱  每TRX可买代币: ${tokensPerTrx.toFixed(2)} 个
+💱  实际代币数量: ${(coinAmountInTrx / 1000000).toFixed(0)} 个
+💱  交易价格: ${this.formatTrxAmount(priceInfo.tradeEthAmount, false, true)} TRX
+⏰  查询时间: ${new Date().toLocaleString()}
+═══════════════════════════════════════
+        `);
+
+        return { 
+          preSaleEthAmount, 
+          preSaleEthAmountFormatted, 
+          preSaleEthAmountInTrx,
+          coinAmount,
+          coinAmountInTrx,
+          tokensPerTrx,
+          actualTokenAmount: (coinAmountInTrx / 1000000).toFixed(0),
+          contractAddress: presaleAddress,
+          priceInfo 
+        };
+
+      } catch (error) {
+        console.error('❌ 查询预售价格失败:', error);
+        console.error('💡 请确保钱包已连接且网络正常');
+        console.error('🔍 详细错误信息:', error.message);
+      }
+    },
+
+    // 控制台命令：直接查询 preSaleEthAmount 存储变量
+    async consoleGetPreSaleEthAmount() {
+      try {
+        console.log('🔍 正在直接查询 preSaleEthAmount 存储变量...');
+
+        const presaleAddress = await this.getPresaleContractAddress();
+        if (!presaleAddress) {
+          console.error('❌ 无法获取预售合约地址');
+          return;
+        }
+
+        const presaleService = new PresaleService(presaleAddress);
+        
+        // 调用 getPoolData 方法获取预售信息
+        const poolData = await presaleService.callMethod('getPoolData');
+        
+        // getPoolData 返回一个数组，第一个元素是 presaleEthAmount_
+        const preSaleEthAmount = poolData[0];
+        const tradeEthAmount = poolData[1];
+        const maxTotalNum = poolData[2];
+        const presaleMaxNum = poolData[3];
+        const coinAmount = poolData[4];
+        const stageUnlockRate = poolData[5];
+        
+        const preSaleEthAmountFormatted = this.formatTrxAmount(preSaleEthAmount, false, true);
+
+        console.log(`
+🔍 preSaleEthAmount 查询结果
+═══════════════════════════════════════
+🏷️  合约地址: ${presaleAddress}
+💎  预售价格: ${preSaleEthAmountFormatted} TRX
+📊  原始数值: ${preSaleEthAmount}
+  💱  交易价格: ${this.formatTrxAmount(tradeEthAmount, false, true)} TRX
+🪙  代币数量: ${coinAmount} 个/TRX
+📈  最大总量: ${maxTotalNum}
+🎯  预售最大数量: ${presaleMaxNum}
+🔓  阶段解锁比例: ${stageUnlockRate}
+⏰  查询时间: ${new Date().toLocaleString()}
+═══════════════════════════════════════
+        `);
+
+        return { 
+          preSaleEthAmount, 
+          preSaleEthAmountFormatted, 
+          contractAddress: presaleAddress,
+          poolData: {
+            preSaleEthAmount,
+            tradeEthAmount,
+            maxTotalNum,
+            presaleMaxNum,
+            coinAmount,
+            stageUnlockRate
+          }
+        };
+
+      } catch (error) {
+        console.error('❌ 查询 preSaleEthAmount 失败:', error);
+        console.error('💡 请确保钱包已连接且网络正常');
+        console.error('🔍 详细错误信息:', error.message);
+      }
+    },
+
+    // 控制台命令：查询详细预售信息
+    async consoleGetDetailedPresaleInfo() {
+      try {
+        console.log('🔍 正在查询详细预售信息...');
+
+        const presaleAddress = await this.getPresaleContractAddress();
+        if (!presaleAddress) {
+          console.error('❌ 无法获取预售合约地址');
+          return;
+        }
+
+        const presaleService = new PresaleService(presaleAddress);
+        
+        // 获取预售状态
+        const status = await presaleService.getPresaleStatus();
+        const statusText = presaleService.getPresaleStatusText ? 
+          presaleService.getPresaleStatusText(status) : 
+          ['未开始', '进行中', '已结束', '已结束', '已结束'][status] || '未知状态';
+        
+        // 获取预售配置
+        const poolData = await presaleService.callMethod('getPoolData');
+        const [
+          preSaleEthAmount,
+          tradeEthAmount,
+          maxTotalNum,
+          presaleMaxNum,
+          coinAmount,
+          stageUnlockRate
+        ] = poolData;
+        
+        // 获取LGE配置
+        let lgeConfig = null;
+        try {
+          lgeConfig = await presaleService.callMethod('getLGEConfig');
+        } catch (err) {
+          console.warn('⚠️ 无法获取LGE配置:', err.message);
+        }
+        
+        // 获取合约余额
+        let contractBalances = null;
+        try {
+          contractBalances = await presaleService.callMethod('getContractBalances');
+        } catch (err) {
+          console.warn('⚠️ 无法获取合约余额:', err.message);
+        }
+        
+        // 获取已处理的BNB数量
+        let processedBNB = null;
+        try {
+          processedBNB = await presaleService.callMethod('processedBNB');
+        } catch (err) {
+          console.warn('⚠️ 无法获取已处理BNB数量:', err.message);
+        }
+
+        console.log(`
+🔍 详细预售信息查询结果
+═══════════════════════════════════════
+🏷️  合约地址: ${presaleAddress}
+📊  预售状态: ${status} (${statusText})
+
+💰 价格配置:
+  💎  预售价格: ${this.formatTrxAmount(preSaleEthAmount, false, true)} TRX
+  💱  交易价格: ${this.formatTrxAmount(tradeEthAmount, false, true)} TRX
+  🪙  代币数量: ${coinAmount} 个/TRX
+
+📈 数量配置:
+  📊  最大总量: ${maxTotalNum}
+  🎯  预售最大数量: ${presaleMaxNum}
+  🔓  阶段解锁比例: ${stageUnlockRate}
+
+${lgeConfig ? `
+🎯 LGE配置:
+  ⏰  开始时间: ${lgeConfig[5] ? new Date(lgeConfig[5] * 1000).toLocaleString() : 'N/A'}
+  🎯  硬顶: ${lgeConfig[6] ? this.formatTrxAmount(lgeConfig[6], true) : 'N/A'} TRX
+  👤  最大购买/钱包: ${lgeConfig[7] ? this.formatTrxAmount(lgeConfig[7], true) : 'N/A'} TRX
+` : ''}
+
+${contractBalances ? `
+💼 合约余额:
+  🪙  代币余额: ${contractBalances[0] || contractBalances.tokenBalance || 'N/A'}
+  💰  TRX余额: ${contractBalances[1] ? this.formatTrxAmount(contractBalances[1]) : 'N/A'} TRX
+` : ''}
+
+${processedBNB ? `
+📊 已处理BNB: ${this.formatTrxAmount(processedBNB)} TRX
+` : ''}
+
+⏰  查询时间: ${new Date().toLocaleString()}
+═══════════════════════════════════════
+        `);
+
+        return { 
+          status,
+          statusText,
+          contractAddress: presaleAddress,
+          poolData: {
+            preSaleEthAmount,
+            tradeEthAmount,
+            maxTotalNum,
+            presaleMaxNum,
+            coinAmount,
+            stageUnlockRate
+          },
+          lgeConfig,
+          contractBalances,
+          processedBNB
+        };
+
+      } catch (error) {
+        console.error('❌ 查询详细预售信息失败:', error);
+        console.error('💡 请确保钱包已连接且网络正常');
+        console.error('🔍 详细错误信息:', error.message);
+      }
+    },
+
     // 控制台命令：检查管理员权限
     async consoleCheckOwner() {
       try {
@@ -2126,6 +2591,235 @@ export default {
         return false;
       }
     },
+
+    // 控制台命令：查询用户预售记录 (preSaleAddress mapping)
+    async consoleGetUserPresaleInfo(userAddress = null) {
+      try {
+        console.log('🔍 正在查询用户预售记录...');
+
+        if (!this.isWalletConnected) {
+          console.error('❌ 钱包未连接，请先连接钱包');
+          return null;
+        }
+
+        const presaleAddress = await this.getPresaleContractAddress();
+        if (!presaleAddress) {
+          console.error('❌ 无法获取预售合约地址');
+          return null;
+        }
+
+        // 如果没有指定用户地址，使用当前连接的钱包地址
+        const targetAddress = userAddress || window.tronWeb.defaultAddress.base58;
+        console.log(`👤 查询地址: ${targetAddress}`);
+
+        const presaleService = new PresaleService(presaleAddress);
+        
+        // 直接调用合约的 preSaleAddress mapping
+        const result = await presaleService.callMethod('preSaleAddress', [targetAddress]);
+        
+        // 解析返回结果
+        const userInfo = {
+          user: result.user || result[0],
+          preSaleCount: result.preSaleCount || result[1],
+          hasUnlockAmount: result.hasUnlockAmount || result[2],
+          stage: result.stage || result[3],
+          verify: result.verify || result[4]
+        };
+
+        if (userInfo.preSaleCount > 0) {
+          console.log(`
+✅ 找到预售记录！
+═══════════════════════════════════════
+🏷️  合约地址: ${presaleAddress}
+👤  用户地址: ${targetAddress}
+💰  预售数量: ${userInfo.preSaleCount}
+🔓  已解锁数量: ${userInfo.hasUnlockAmount}
+📊  当前阶段: ${userInfo.stage}
+✅  验证状态: ${userInfo.verify ? '已验证' : '未验证'}
+⏰  查询时间: ${new Date().toLocaleString()}
+═══════════════════════════════════════
+          `);
+        } else {
+          console.log(`
+❌ 未找到预售记录
+═══════════════════════════════════════
+🏷️  合约地址: ${presaleAddress}
+👤  用户地址: ${targetAddress}
+💡  该地址未参与预售或预售数量为0
+⏰  查询时间: ${new Date().toLocaleString()}
+═══════════════════════════════════════
+          `);
+        }
+
+        return userInfo;
+
+              } catch (error) {
+          console.error('❌ 查询用户预售记录失败:', error);
+          console.error('💡 请确保钱包已连接且网络正常');
+          return null;
+        }
+      },
+
+      // 控制台命令：查询预售总览信息
+      async consoleGetTotalPresaleInfo() {
+        try {
+          console.log('📊 正在查询预售总览信息...');
+
+          if (!this.isWalletConnected) {
+            console.error('❌ 钱包未连接，请先连接钱包');
+            return null;
+          }
+
+          const presaleAddress = await this.getPresaleContractAddress();
+          if (!presaleAddress) {
+            console.error('❌ 无法获取预售合约地址');
+            return null;
+          }
+
+          const presaleService = new PresaleService(presaleAddress);
+          
+          // 获取预售相关的总量信息
+          const [
+            totalPresaleBNB,      // 预售阶段累积的BNB
+            accumulatedBNB,       // 累积的BNB总量
+            processedBNB,         // 已处理的BNB数量
+            presaleStatus,        // 预售状态
+            startTime,            // 预售开始时间
+            hardcap               // 硬顶限制
+          ] = await Promise.all([
+            presaleService.callMethod('totalPresaleBNB'),
+            presaleService.callMethod('accumulatedBNB'),
+            presaleService.callMethod('processedBNB'),
+            presaleService.callMethod('presaleStatus'),
+            presaleService.callMethod('startTime'),
+            presaleService.callMethod('hardcap')
+          ]);
+
+          // 格式化BNB金额（从Sun单位转换为TRX）
+          const formatBNB = (amount) => {
+            if (!amount) return '0';
+            const bnbAmount = Number(amount) / 1e6; // TRON使用6位小数
+            return bnbAmount.toFixed(6);
+          };
+
+          // 格式化时间
+          const formatTime = (timestamp) => {
+            if (!timestamp || timestamp === '0') return 'N/A';
+            const date = new Date(Number(timestamp));
+            return date.toLocaleString();
+          };
+
+          // 获取状态文本
+          const getStatusText = (status) => {
+            switch (status) {
+              case '0': return '未开始';
+              case '1': return '进行中';
+              case '2': return '已结束';
+              default: return '未知状态';
+            }
+          };
+
+          console.log(`
+📊 预售总览信息
+═══════════════════════════════════════
+🏷️  合约地址: ${presaleAddress}
+📈  当前状态: ${presaleStatus} (${getStatusText(presaleStatus)})
+💰  预售总金额: ${formatBNB(totalPresaleBNB)} TRX
+💎  累积总金额: ${formatBNB(accumulatedBNB)} TRX
+🔄  已处理金额: ${formatBNB(processedBNB)} TRX
+🎯  硬顶限制: ${formatBNB(hardcap)} TRX
+⏰  开始时间: ${formatTime(startTime)}
+⏰  查询时间: ${new Date().toLocaleString()}
+═══════════════════════════════════════
+          `);
+
+          return {
+            presaleAddress,
+            presaleStatus,
+            totalPresaleBNB: formatBNB(totalPresaleBNB),
+            accumulatedBNB: formatBNB(accumulatedBNB),
+            processedBNB: formatBNB(processedBNB),
+            hardcap: formatBNB(hardcap),
+            startTime: formatTime(startTime)
+          };
+
+        } catch (error) {
+          console.error('❌ 查询预售总览信息失败:', error);
+          console.error('💡 请确保钱包已连接且网络正常');
+          return null;
+        }
+      },
+
+      // 控制台命令：查询指定地址的预售信息
+      async consoleCheckAddress(address = null) {
+        try {
+          if (!address) {
+            console.error('❌ 请提供要查询的地址');
+            console.log('💡 使用方法: checkAddress("地址")');
+            console.log('💡 例如: checkAddress("TK57586sko7cTQxgNUGqpzMGWTwWBsr6iu")');
+            return null;
+          }
+
+          console.log(`🔍 正在查询地址 ${address} 的预售信息...`);
+
+          if (!this.isWalletConnected) {
+            console.error('❌ 钱包未连接，请先连接钱包');
+            return null;
+          }
+
+          const presaleAddress = await this.getPresaleContractAddress();
+          if (!presaleAddress) {
+            console.error('❌ 无法获取预售合约地址');
+            return null;
+          }
+
+          const presaleService = new PresaleService(presaleAddress);
+          
+          // 获取该地址的预售信息
+          const presaleInfo = await presaleService.callMethod('preSaleAddress', [address]);
+
+          // 解析返回结果
+          const userInfo = {
+            user: presaleInfo.user || presaleInfo[0],
+            preSaleCount: presaleInfo.preSaleCount || presaleInfo[1],
+            hasUnlockAmount: presaleInfo.hasUnlockAmount || presaleInfo[2],
+            stage: presaleInfo.stage || presaleInfo[3],
+            verify: presaleInfo.verify || presaleInfo[4]
+          };
+
+          if (userInfo.preSaleCount > 0) {
+            console.log(`
+✅ 找到预售记录！
+═══════════════════════════════════════
+🏷️  合约地址: ${presaleAddress}
+👤  查询地址: ${address}
+💰  预售数量: ${userInfo.preSaleCount}
+🔓  已解锁数量: ${userInfo.hasUnlockAmount}
+📊  当前阶段: ${userInfo.stage}
+✅  验证状态: ${userInfo.verify ? '已验证' : '未验证'}
+⏰  查询时间: ${new Date().toLocaleString()}
+═══════════════════════════════════════
+            `);
+          } else {
+            console.log(`
+❌ 未找到预售记录
+═══════════════════════════════════════
+🏷️  合约地址: ${presaleAddress}
+👤  查询地址: ${address}
+💡  该地址未参与预售或预售数量为0
+⏰  查询时间: ${new Date().toLocaleString()}
+═══════════════════════════════════════
+            `);
+          }
+
+          return userInfo;
+
+        } catch (error) {
+          console.error('❌ 查询地址预售信息失败:', error);
+          console.error('💡 请确保钱包已连接且网络正常');
+          return null;
+        }
+      },
 
     // 控制台命令：开启预售
     async consoleStartPresale() {
@@ -2419,7 +3113,7 @@ export default {
     },
 
     // 格式化 TRX 金额 - 修复：正确处理SUN到TRX转换，避免二次格式化
-    formatTrxAmount(amount) {
+    formatTrxAmount(amount, isHardCapOrMaxBuy = false, isPresalePrice = false) {
       if (!amount) return '0 TRX'
 
       try {
@@ -2429,20 +3123,73 @@ export default {
           numericAmount = amount.toString()
         }
 
-        // 转换为数字并处理SUN到TRX的转换
-        const sunAmount = parseFloat(numericAmount.toString())
-        const trxAmount = sunAmount / 1000000 // 转换 SUN 到 TRX
+        // 转换为数字
+        let trxAmount = parseFloat(numericAmount)
+        
+        // 添加详细的调试日志
+        console.log(`🔍 formatTrxAmount 输入详情:`, {
+          原始输入: amount,
+          转换后数值: trxAmount,
+          输入类型: typeof amount,
+          是否硬顶或最大购买量: isHardCapOrMaxBuy,
+          是否预售价格: isPresalePrice
+        })
+        
+        // 如果是预售价格，且数值异常大，可能需要特殊处理
+        if (isPresalePrice && trxAmount > 1e15) {
+          console.log(`🔧 检测到预售价格异常大数值: ${trxAmount}，尝试智能单位转换`)
+          // 预售价格可能是wei单位，需要除以1e18
+          if (trxAmount > 1e18) {
+            console.log(`🔄 预售价格应用wei到ether转换: ${trxAmount} / 1e18`)
+            trxAmount = trxAmount / 1e18
+          } else if (trxAmount > 1e12) {
+            console.log(`🔄 预售价格应用sun到trx转换: ${trxAmount} / 1e6`)
+            trxAmount = trxAmount / 1e6
+          }
+        }
+        // 如果是硬顶或最大购买量，且数值异常大，需要额外除以10^6
+        else if (isHardCapOrMaxBuy && trxAmount > 1000000000000) { // 提高阈值到1万亿
+          console.log(`🔧 检测到硬顶/最大购买量异常大数值: ${trxAmount}，应用额外单位转换`)
+          // 检查是否已经是TRX单位（通过检查数值范围）
+          if (trxAmount > 1e18) { // 如果超过1e18，可能是wei单位，需要除以1e18
+            console.log(`🔄 检测到可能是wei单位，应用wei到ether转换`)
+            trxAmount = trxAmount / 1e18
+          } else if (trxAmount > 1e6) { // 如果超过1e6，可能是sun单位，需要除以1e6
+            console.log(`🔄 检测到可能是sun单位，应用sun到trx转换`)
+            trxAmount = trxAmount / 1e6
+          } else {
+            // 其他情况，应用额外的10^6转换
+            trxAmount = trxAmount / 1000000
+          }
+        } else {
+          // 普通情况：处理SUN到TRX的转换
+          trxAmount = trxAmount / 1000000 // 转换 SUN 到 TRX
+        }
+        
+        // 添加更详细的调试信息
+        if (isHardCapOrMaxBuy) {
+          console.log(`🔍 硬顶/最大购买量处理详情:`, {
+            原始数值: numericAmount,
+            转换后数值: trxAmount,
+            是否应用额外转换: trxAmount > 1000000000000,
+            最终数值: trxAmount
+          })
+        }
 
         // 添加详细调试日志
         console.log(`💰 TRX金额转换详情:`, {
           原始输入: amount,
-          SUN数值: sunAmount,
-          TRX数值: trxAmount,
-          输入类型: typeof amount
+          转换后数值: trxAmount,
+          输入类型: typeof amount,
+          是否硬顶或最大购买量: isHardCapOrMaxBuy
         })
 
         // 修复：合理的格式化阈值，避免正常数值被错误格式化
-        if (trxAmount >= 10000000) { // 1千万TRX以上才使用M单位
+        if (isHardCapOrMaxBuy && trxAmount >= 1000000000) { // 硬顶/最大购买量：10亿以上使用B单位
+          return `${(trxAmount / 1000000000).toFixed(2)}B TRX`
+        } else if (isHardCapOrMaxBuy && trxAmount >= 1000000) { // 硬顶/最大购买量：100万以上使用M单位
+          return `${(trxAmount / 1000000).toFixed(2)}M TRX`
+        } else if (trxAmount >= 10000000) { // 普通情况：1千万TRX以上才使用M单位
           return `${(trxAmount / 1000000).toFixed(2)}M TRX`
         } else if (trxAmount >= 10000) { // 1万TRX以上才使用K单位
           return `${(trxAmount / 1000).toFixed(2)}K TRX`
@@ -2456,20 +3203,59 @@ export default {
       }
     },
 
-    // 格式化代币数量 - 修复：正确处理decimals参数
+    // 安全转换 BigInt 到数字
+    safeBigIntToNumber(value) {
+      if (typeof value === 'bigint') {
+        return parseFloat(value.toString())
+      }
+      return parseFloat(value) || 0
+    },
+
+    // 格式化代币数量 - 修复：正确处理decimals参数和BigInt类型
     formatTokenAmount(amount, decimals = 18) {
       if (!amount) return '100%'
 
       try {
+        // 添加详细的调试日志
+        console.log(`🔍 formatTokenAmount 输入详情:`, {
+          amount: amount,
+          类型: typeof amount,
+          是否为BigInt: typeof amount === 'bigint',
+          数值: amount.toString()
+        })
+
         // 如果amount是字符串且包含小数点，说明已经格式化过了
         if (typeof amount === 'string' && amount.includes('.')) {
           const num = parseFloat(amount)
           return `${num.toLocaleString()}`
         }
 
+        // 处理BigInt类型
+        let amountToProcess = amount
+        if (typeof amount === 'bigint') {
+          amountToProcess = amount.toString()
+        }
+
         // 使用TokenService的静态方法正确处理decimals
-        const formattedAmount = TokenService.formatTokenAmount(amount.toString(), decimals)
+        const formattedAmount = TokenService.formatTokenAmount(amountToProcess, decimals)
+        console.log(`🔍 TokenService.formatTokenAmount 结果:`, {
+          输入: amountToProcess,
+          decimals: decimals,
+          输出: formattedAmount
+        })
+
         const num = parseFloat(formattedAmount)
+        console.log(`🔍 最终数值:`, {
+          格式化后: formattedAmount,
+          解析后: num,
+          是否为NaN: isNaN(num)
+        })
+
+        if (isNaN(num) || num === 0) {
+          console.warn('⚠️ 解析后的数值无效，返回原始值')
+          return amountToProcess
+        }
+
         return `${num.toLocaleString()}`
       } catch (error) {
         console.warn('⚠️ 代币数量格式化失败:', error, 'amount:', amount, 'decimals:', decimals)

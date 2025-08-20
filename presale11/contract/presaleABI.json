@@ -103,6 +103,50 @@
         "inputs": [
             {
                 "indexed": false,
+                "internalType": "uint256",
+                "name": "share",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "receiver",
+                "type": "address"
+            }
+        ],
+        "name": "BackingConfigSet",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "receiver",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "timestamp",
+                "type": "uint256"
+            }
+        ],
+        "name": "BackingFundsAllocated",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
                 "internalType": "string",
                 "name": "tokenType",
                 "type": "string"
@@ -140,6 +184,99 @@
             }
         ],
         "name": "FactoryAddressSet",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "startTime",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "hardcap",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "maxBuyPerWallet",
+                "type": "uint256"
+            }
+        ],
+        "name": "LGEConfigSet",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "user",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "userAmount",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "devAmount",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "devReceiver",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "timestamp",
+                "type": "uint256"
+            }
+        ],
+        "name": "LPDistributed",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "userShare",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "devShare",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "devReceiver",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "bool",
+                "name": "enabled",
+                "type": "bool"
+            }
+        ],
+        "name": "LPDistributionSet",
         "type": "event"
     },
     {
@@ -462,8 +599,71 @@
         "type": "event"
     },
     {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "user",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "timestamp",
+                "type": "uint256"
+            }
+        ],
+        "name": "VestedLPClaimed",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "delay",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "rate",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "bool",
+                "name": "enabled",
+                "type": "bool"
+            }
+        ],
+        "name": "VestingConfigSet",
+        "type": "event"
+    },
+    {
         "stateMutability": "payable",
         "type": "fallback"
+    },
+    {
+        "inputs": [],
+        "name": "LP_SHARE_BASE",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
     },
     {
         "inputs": [],
@@ -565,12 +765,57 @@
     },
     {
         "inputs": [],
+        "name": "backingReceiver",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "backingShare",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
         "name": "bnbAccumulationEnabled",
         "outputs": [
             {
                 "internalType": "bool",
                 "name": "",
                 "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "user",
+                "type": "address"
+            }
+        ],
+        "name": "calculateVestedAmount",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "vestedAmount",
+                "type": "uint256"
             }
         ],
         "stateMutability": "view",
@@ -593,6 +838,13 @@
             }
         ],
         "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "claimVestedLP",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
     },
     {
@@ -634,6 +886,32 @@
         "name": "configureLiquidity",
         "outputs": [],
         "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "devLPReceiver",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "devLPShare",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
         "type": "function"
     },
     {
@@ -851,6 +1129,87 @@
     },
     {
         "inputs": [],
+        "name": "getLGEConfig",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "vestingDelay_",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "vestingRate_",
+                "type": "uint256"
+            },
+            {
+                "internalType": "bool",
+                "name": "vestingEnabled_",
+                "type": "bool"
+            },
+            {
+                "internalType": "uint256",
+                "name": "backingShare_",
+                "type": "uint256"
+            },
+            {
+                "internalType": "address",
+                "name": "backingReceiver_",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "startTime_",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "hardcap_",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "maxBuyPerWallet_",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getLPDistributionConfig",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "userShare",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "devShare",
+                "type": "uint256"
+            },
+            {
+                "internalType": "address",
+                "name": "devReceiver",
+                "type": "address"
+            },
+            {
+                "internalType": "bool",
+                "name": "enabled",
+                "type": "bool"
+            },
+            {
+                "internalType": "uint256",
+                "name": "shareBase",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
         "name": "getLiquidityConfig",
         "outputs": [
             {
@@ -971,7 +1330,118 @@
     },
     {
         "inputs": [],
+        "name": "getPoolData",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "presaleEthAmount_",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "tradeEthAmount_",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "maxTotalNum_",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "presaleMaxNum_",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "coinAmount_",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "stageUnlockRate_",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getPresaleUnit",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
         "name": "getTotalSupply",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getTradeUnit",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "user",
+                "type": "address"
+            }
+        ],
+        "name": "getUserVestingStatus",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "totalLP",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "vestedAvailable",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "alreadyClaimed",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "nextVestingTime",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "hardcap",
         "outputs": [
             {
                 "internalType": "uint256",
@@ -998,6 +1468,19 @@
     {
         "inputs": [],
         "name": "lastMarketAmount",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "lastVestingTime",
         "outputs": [
             {
                 "internalType": "uint256",
@@ -1107,6 +1590,19 @@
     },
     {
         "inputs": [],
+        "name": "lpDistributionEnabled",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
         "name": "lpTokenReceiver",
         "outputs": [
             {
@@ -1140,6 +1636,19 @@
     {
         "inputs": [],
         "name": "marketDisAmount",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "maxBuyPerWallet",
         "outputs": [
             {
                 "internalType": "uint256",
@@ -1275,6 +1784,30 @@
         "type": "function"
     },
     {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "bnbAmount",
+                "type": "uint256"
+            }
+        ],
+        "name": "previewLPDistribution",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "userAmount",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "devAmount",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
         "inputs": [],
         "name": "processedBNB",
         "outputs": [
@@ -1336,6 +1869,24 @@
     {
         "inputs": [
             {
+                "internalType": "uint256",
+                "name": "_backingShare",
+                "type": "uint256"
+            },
+            {
+                "internalType": "address",
+                "name": "_backingReceiver",
+                "type": "address"
+            }
+        ],
+        "name": "setBackingConfig",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
                 "internalType": "address",
                 "name": "_coin",
                 "type": "address"
@@ -1389,6 +1940,57 @@
         "inputs": [
             {
                 "internalType": "uint256",
+                "name": "_startTime",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_hardcap",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_maxBuyPerWallet",
+                "type": "uint256"
+            }
+        ],
+        "name": "setLGEConfig",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "_userShare",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_devShare",
+                "type": "uint256"
+            },
+            {
+                "internalType": "address",
+                "name": "_devReceiver",
+                "type": "address"
+            },
+            {
+                "internalType": "bool",
+                "name": "_enabled",
+                "type": "bool"
+            }
+        ],
+        "name": "setLPDistribution",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
                 "name": "_slippage",
                 "type": "uint256"
             },
@@ -1404,19 +2006,6 @@
             }
         ],
         "name": "setLiquidityConfig",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "_lpAddress",
-                "type": "address"
-            }
-        ],
-        "name": "setLpAddress",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -1535,6 +2124,29 @@
         "type": "function"
     },
     {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "_vestingDelay",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "_vestingRate",
+                "type": "uint256"
+            },
+            {
+                "internalType": "bool",
+                "name": "_enabled",
+                "type": "bool"
+            }
+        ],
+        "name": "setVestingConfig",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
         "inputs": [],
         "name": "slippageProtection",
         "outputs": [
@@ -1562,6 +2174,32 @@
     },
     {
         "inputs": [],
+        "name": "startTime",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "totalBackingAllocated",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
         "name": "totalLPTokens",
         "outputs": [
             {
@@ -1576,6 +2214,19 @@
     {
         "inputs": [],
         "name": "totalPresaleBNB",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "totalVestedAmount",
         "outputs": [
             {
                 "internalType": "uint256",
@@ -1641,6 +2292,38 @@
     },
     {
         "inputs": [],
+        "name": "userLPShare",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "name": "userVestedClaimed",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
         "name": "validateFactoryAuthorization",
         "outputs": [
             {
@@ -1656,6 +2339,45 @@
             {
                 "internalType": "uint256",
                 "name": "contractBalance",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "vestingDelay",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "vestingEnabled",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "vestingRate",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
                 "type": "uint256"
             }
         ],

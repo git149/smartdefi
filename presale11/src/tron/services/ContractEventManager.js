@@ -11,7 +11,7 @@ class ContractEventManager {
   constructor(tronWeb, options = {}) {
     this.tronWeb = tronWeb
     this.options = {
-      coordinatorAddress: options.coordinatorAddress || 'TTMTNpZPeaxV9aT3mDuhMT7t6Suu1NtMrc',
+      coordinatorAddress: options.coordinatorAddress || 'TGUUgCztEyXDwEyigoAAZP9HxWC6VdiKDj',
       enableAutoDiscovery: options.enableAutoDiscovery !== false,
       discoveryInterval: options.discoveryInterval || 30000,
       maxContracts: options.maxContracts || 100,
