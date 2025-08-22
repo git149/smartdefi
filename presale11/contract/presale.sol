@@ -1205,6 +1205,7 @@ contract PRESALE is Ownable, ReentrancyGuard {
      */
     function _addBNBLiquidityInternal() internal {
         require(!liquidityAdded, "Liquidity already added");
+        
         require(liquidityTokenAmount > 0, "Token amount not configured");
         require(liquidityBNBAmount > 0, "BNB amount not configured");
 
@@ -1512,28 +1513,53 @@ contract PRESALE is Ownable, ReentrancyGuard {
      * @param _lpReceiver LP代币接收地址
      */
     function configureLiquidity(
-        uint256 _tokenAmount,
-        uint256 _bnbAmount,
-        uint256 _slippage,
-        address _lpReceiver
-    ) external onlyOwner {
-        require(_tokenAmount > 0, "Invalid token amount");
-        require(_bnbAmount > 0, "Invalid BNB amount");
-        require(_slippage <= 1000, "Slippage too high"); // 最大10%
-        require(_lpReceiver != address(0), "Invalid LP receiver");
+    uint256 _tokenAmount,
+    uint256 _bnbAmount,
+    uint256 _slippage,
+    address _lpReceiver
+) external onlyOwner {
+    require(_slippage <= 1000, "Slippage too high");
+    require(_lpReceiver != address(0), "Invalid LP receiver");
 
-        liquidityTokenAmount = _tokenAmount;
-        liquidityBNBAmount = _bnbAmount;
-        slippageProtection = _slippage;
-        lpTokenReceiver = _lpReceiver;
+            // 🔧 自动转移代币：如果代币数量为0，从工厂转移代币到预售合约
+        if (_tokenAmount == 0) {
+            uint256 factoryAllowance = 0;
+            if (factoryAddress != address(0) && coinAddress != address(0)) {
+                factoryAllowance = IERC20(coinAddress).allowance(factoryAddress, address(this));
+            }
+            require(factoryAllowance > 0, "No tokens available from factory");
+            
+            // 实际转移代币到预售合约
+            uint256 beforeBalance = IERC20(coinAddress).balanceOf(address(this));
+            TransferHelper.safeTransferFrom(
+                coinAddress,
+                factoryAddress,
+                address(this),
+                factoryAllowance
+            );
+            uint256 afterBalance = IERC20(coinAddress).balanceOf(address(this));
+            _tokenAmount = afterBalance - beforeBalance;
+            
+            require(_tokenAmount > 0, "Failed to receive tokens from factory");
+        }
 
-        emit LiquidityConfigured(
-            _tokenAmount,
-            _bnbAmount,
-            _slippage,
-            _lpReceiver
-        );
+    // �� 最小化修改：如果BNB数量为0，使用当前合约余额
+    if (_bnbAmount == 0) {
+        _bnbAmount = address(this).balance;
+        require(_bnbAmount > 0, "No BNB available");
     }
+
+    // 验证参数
+    require(_tokenAmount > 0, "Invalid token amount");
+    require(_bnbAmount > 0, "Invalid BNB amount");
+
+    liquidityTokenAmount = _tokenAmount;
+    liquidityBNBAmount = _bnbAmount;
+    slippageProtection = _slippage;
+    lpTokenReceiver = _lpReceiver;
+
+    emit LiquidityConfigured(_tokenAmount, _bnbAmount, _slippage, _lpReceiver);
+}
 
     /**
      * @dev 安全授权函数 - 先撤销再授权

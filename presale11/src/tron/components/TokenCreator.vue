@@ -2130,9 +2130,9 @@ export default {
           return '0'
         }
 
-        // 转换为SUN单位 (1 TRX = 1,000,000 SUN)
-        const sunValue = Math.floor(numValue * 1000000)
-        return sunValue.toString()
+        // 直接返回清理后的数值，不需要转换为SUN单位
+        // token数量应该保持原样，合约会自动处理18位小数精度
+        return cleanValue
       } catch (error) {
         console.error('数值转换错误:', error, 'input:', value)
         return '0'

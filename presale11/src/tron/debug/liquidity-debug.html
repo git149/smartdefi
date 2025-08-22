@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>预售流动性问题诊断工具</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #34495e;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+        .status.success {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+        .status.warning {
+            background: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+        .status.info {
+            background: #d1ecf1;
+            border-color: #17a2b8;
+            color: #0c5460;
+        }
+        .result-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+        .result-section h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .issue-item {
+            background: white;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #e74c3c;
+        }
+        .issue-item.critical {
+            border-left-color: #e74c3c;
+            background: #fdf2f2;
+        }
+        .issue-item.warning {
+            border-left-color: #f39c12;
+            background: #fef9e7;
+        }
+        .issue-item.info {
+            border-left-color: #3498db;
+            background: #f0f8ff;
+        }
+        .solution-item {
+            background: white;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #27ae60;
+        }
+        .solution-steps {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .solution-steps li {
+            margin: 5px 0;
+        }
+        .loading {
+            text-align: center;
+            color: #7f8c8d;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .copy-button {
+            background: #95a5a6;
+            font-size: 12px;
+            padding: 5px 10px;
+            margin-left: 10px;
+        }
+        .copy-button:hover {
+            background: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 预售流动性问题诊断工具</h1>
+        
+        <div class="input-group">
+            <label for="presaleAddress">预售合约地址:</label>
+            <input type="text" id="presaleAddress" placeholder="输入预售合约地址 (例如: TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t)" />
+        </div>
+        
+        <div class="button-group">
+            <button onclick="runDiagnostic()" id="diagnosticBtn">🔍 开始诊断</button>
+            <button onclick="clearResults()" id="clearBtn">🗑️ 清除结果</button>
+        </div>
+        
+        <div id="status" class="status info" style="display: none;">
+            <div id="statusText"></div>
+        </div>
+        
+        <div id="results" style="display: none;">
+            <!-- 诊断结果将在这里显示 -->
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let diagnosticResults = null;
+        
+        // 运行诊断
+        async function runDiagnostic() {
+            const presaleAddress = document.getElementById('presaleAddress').value.trim();
+            
+            if (!presaleAddress) {
+                showStatus('请输入预售合约地址', 'error');
+                return;
+            }
+            
+            // 显示加载状态
+            showStatus('正在执行诊断，请稍候...', 'info');
+            document.getElementById('diagnosticBtn').disabled = true;
+            
+            try {
+                // 检查 TronWeb 是否可用
+                if (typeof window.tronWeb === 'undefined') {
+                    throw new Error('TronWeb 未连接，请先连接 TronLink 钱包');
+                }
+                
+                // 执行诊断
+                const results = await performDiagnostic(presaleAddress);
+                diagnosticResults = results;
+                
+                // 显示结果
+                displayResults(results);
+                showStatus('诊断完成！', 'success');
+                
+            } catch (error) {
+                console.error('诊断失败:', error);
+                showStatus(`诊断失败: ${error.message}`, 'error');
+            } finally {
+                document.getElementById('diagnosticBtn').disabled = false;
+            }
+        }
+        
+        // 执行诊断逻辑
+        async function performDiagnostic(presaleAddress) {
+            console.log('🔍 开始执行诊断...', presaleAddress);
+            
+            const results = {
+                presaleAddress,
+                timestamp: new Date().toISOString(),
+                presaleStatus: null,
+                tokenStatus: null,
+                factoryStatus: null,
+                balanceStatus: null,
+                issues: [],
+                solutions: []
+            };
+            
+            try {
+                // 1. 检查预售状态
+                results.presaleStatus = await checkPresaleStatus(presaleAddress);
+                
+                // 2. 检查代币状态
+                results.tokenStatus = await checkTokenStatus(presaleAddress);
+                
+                // 3. 检查工厂授权状态
+                results.factoryStatus = await checkFactoryStatus(presaleAddress);
+                
+                // 4. 检查合约余额
+                results.balanceStatus = await checkContractBalances(presaleAddress);
+                
+                // 5. 分析问题
+                results.issues = analyzeIssues(results);
+                
+                // 6. 生成解决方案
+                results.solutions = generateSolutions(results.issues);
+                
+            } catch (error) {
+                console.error('诊断过程中出错:', error);
+                results.error = error.message;
+            }
+            
+            return results;
+        }
+        
+        // 检查预售状态
+        async function checkPresaleStatus(presaleAddress) {
+            try {
+                const contract = await window.tronWeb.contract().at(presaleAddress);
+                
+                const [presaleStatus, isFinalized, autoEnabled, liquidityAdded] = await Promise.all([
+                    contract.presaleStatus().call(),
+                    contract.presaleFinalized().call(),
+                    contract.autoFinalizationEnabled().call(),
+                    contract.liquidityAdded().call()
+                ]);
+                
+                return {
+                    presaleStatus: Number(presaleStatus),
+                    presaleStatusText: getPresaleStatusText(Number(presaleStatus)),
+                    isFinalized: Boolean(isFinalized),
+                    autoEnabled: Boolean(autoEnabled),
+                    liquidityAdded: Boolean(liquidityAdded)
+                };
+            } catch (error) {
+                console.error('检查预售状态失败:', error);
+                return { error: error.message };
+            }
+        }
+        
+        // 检查代币状态
+        async function checkTokenStatus(presaleAddress) {
+            try {
+                const contract = await window.tronWeb.contract().at(presaleAddress);
+                const tokenAddress = await contract.coinAddress().call();
+                
+                if (tokenAddress === 'T9yD14Nj9j7xAB4dbGeiX9h8ekKHpVp9C') { // 零地址
+                    return { error: '代币地址未设置' };
+                }
+                
+                const tokenContract = await window.tronWeb.contract().at(tokenAddress);
+                const [name, symbol, decimals, totalSupply] = await Promise.all([
+                    tokenContract.name().call(),
+                    tokenContract.symbol().call(),
+                    tokenContract.decimals().call(),
+                    tokenContract.totalSupply().call()
+                ]);
+                
+                return {
+                    tokenAddress,
+                    tokenName: name,
+                    tokenSymbol: symbol,
+                    tokenDecimals: Number(decimals),
+                    totalSupply: totalSupply
+                };
+            } catch (error) {
+                console.error('检查代币状态失败:', error);
+                return { error: error.message };
+            }
+        }
+        
+        // 检查工厂授权状态
+        async function checkFactoryStatus(presaleAddress) {
+            try {
+                const contract = await window.tronWeb.contract().at(presaleAddress);
+                const [factoryAddress, allowance] = await Promise.all([
+                    contract.factoryAddress().call(),
+                    contract.getFactoryAllowance().call()
+                ]);
+                
+                if (factoryAddress === 'T9yD14Nj9j7xAB4dbGeiX9h8ekKHpVp9C') { // 零地址
+                    return { error: '工厂合约地址未设置' };
+                }
+                
+                return {
+                    factoryAddress,
+                    allowance: allowance,
+                    allowanceFormatted: window.tronWeb.fromSun(allowance)
+                };
+            } catch (error) {
+                console.error('检查工厂授权状态失败:', error);
+                return { error: error.message };
+            }
+        }
+        
+        // 检查合约余额
+        async function checkContractBalances(presaleAddress) {
+            try {
+                const contract = await window.tronWeb.contract().at(presaleAddress);
+                const [balances, accumulatedBNB] = await Promise.all([
+                    contract.getContractBalances().call(),
+                    contract.accumulatedBNB().call()
+                ]);
+                
+                return {
+                    tokenBalance: balances.tokenBalance,
+                    bnbBalance: balances.bnbBalance,
+                    accumulatedBNB: accumulatedBNB,
+                    tokenBalanceFormatted: window.tronWeb.fromSun(balances.tokenBalance),
+                    bnbBalanceFormatted: window.tronWeb.fromSun(balances.bnbBalance),
+                    accumulatedBNBFormatted: window.tronWeb.fromSun(accumulatedBNB)
+                };
+            } catch (error) {
+                console.error('检查合约余额失败:', error);
+                return { error: error.message };
+            }
+        }
+        
+        // 分析问题
+        function analyzeIssues(results) {
+            const issues = [];
+            
+            // 检查预售状态
+            if (results.presaleStatus.error) {
+                issues.push({ 
+                    type: 'PRESALE_STATUS_ERROR', 
+                    message: results.presaleStatus.error,
+                    severity: 'critical'
+                });
+            }
+            
+            if (results.presaleStatus.presaleStatus < 2) {
+                issues.push({ 
+                    type: 'PRESALE_NOT_ENDED', 
+                    message: `预售尚未结束，当前状态: ${results.presaleStatus.presaleStatusText}`,
+                    severity: 'warning'
+                });
+            }
+            
+            if (results.presaleStatus.isFinalized) {
+                issues.push({ 
+                    type: 'PRESALE_ALREADY_FINALIZED', 
+                    message: '预售已经完成，无法重复执行',
+                    severity: 'info'
+                });
+            }
+            
+            // 检查代币状态
+            if (results.tokenStatus.error) {
+                issues.push({ 
+                    type: 'TOKEN_STATUS_ERROR', 
+                    message: results.tokenStatus.error,
+                    severity: 'critical'
+                });
+            }
+            
+            // 检查工厂授权
+            if (results.factoryStatus.error) {
+                issues.push({ 
+                    type: 'FACTORY_STATUS_ERROR', 
+                    message: results.factoryStatus.error,
+                    severity: 'critical'
+                });
+            }
+            
+            if (Number(results.factoryStatus.allowance) === 0) {
+                issues.push({ 
+                    type: 'NO_FACTORY_ALLOWANCE', 
+                    message: '工厂合约没有对预售合约的代币授权',
+                    severity: 'critical'
+                });
+            }
+            
+            // 检查余额
+            if (results.balanceStatus.error) {
+                issues.push({ 
+                    type: 'BALANCE_STATUS_ERROR', 
+                    message: results.balanceStatus.error,
+                    severity: 'critical'
+                });
+            }
+            
+            if (Number(results.balanceStatus.accumulatedBNB) === 0) {
+                issues.push({ 
+                    type: 'NO_ACCUMULATED_BNB', 
+                    message: '没有累积的BNB用于流动性',
+                    severity: 'warning'
+                });
+            }
+            
+            // 检查关键问题：代币余额不足
+            if (Number(results.balanceStatus.tokenBalance) === 0 && Number(results.factoryStatus.allowance) > 0) {
+                issues.push({ 
+                    type: 'TRANSFER_FROM_FAILED_ROOT_CAUSE', 
+                    message: '预售合约没有代币余额，但工厂有授权额度 - 这是 TRANSFER_FROM_FAILED 的根本原因',
+                    severity: 'critical'
+                });
+            }
+            
+            return issues;
+        }
+        
+        // 生成解决方案
+        function generateSolutions(issues) {
+            const solutions = [];
+            
+            issues.forEach(issue => {
+                switch (issue.type) {
+                    case 'PRESALE_NOT_ENDED':
+                        solutions.push({
+                            issue: issue.type,
+                            solution: '等待预售自然结束，或手动设置预售状态为已结束',
+                            action: 'wait_or_manual_end'
+                        });
+                        break;
+                        
+                    case 'PRESALE_ALREADY_FINALIZED':
+                        solutions.push({
+                            issue: issue.type,
+                            solution: '预售已完成，无需重复执行',
+                            action: 'no_action_needed'
+                        });
+                        break;
+                        
+                    case 'TOKEN_ADDRESS_INVALID':
+                        solutions.push({
+                            issue: issue.type,
+                            solution: '检查代币合约地址配置，确保地址正确',
+                            action: 'check_token_config'
+                        });
+                        break;
+                        
+                    case 'FACTORY_ADDRESS_INVALID':
+                        solutions.push({
+                            issue: issue.type,
+                            solution: '检查工厂合约地址配置，确保地址正确',
+                            action: 'check_factory_config'
+                        });
+                        break;
+                        
+                    case 'NO_FACTORY_ALLOWANCE':
+                        solutions.push({
+                            issue: issue.type,
+                            solution: '工厂合约需要先对预售合约进行代币授权',
+                            action: 'factory_approve_tokens'
+                        });
+                        break;
+                        
+                    case 'NO_ACCUMULATED_BNB':
+                        solutions.push({
+                            issue: issue.type,
+                            solution: '没有BNB累积，无法添加流动性',
+                            action: 'no_action_possible'
+                        });
+                        break;
+                        
+                    case 'TRANSFER_FROM_FAILED_ROOT_CAUSE':
+                        solutions.push({
+                            issue: issue.type,
+                            solution: '工厂合约中代币余额不足，需要先向工厂合约转入足够的代币',
+                            action: 'transfer_tokens_to_factory',
+                            steps: [
+                                '1. 检查工厂合约的代币余额',
+                                '2. 如果余额不足，从代币合约向工厂合约转入代币',
+                                '3. 确保工厂合约有足够的代币用于预售',
+                                '4. 重新执行 finalizePresaleAndAddLiquidity'
+                            ]
+                        });
+                        break;
+                        
+                    default:
+                        solutions.push({
+                            issue: issue.type,
+                            solution: '需要进一步诊断',
+                            action: 'further_diagnosis'
+                        });
+                }
+            });
+            
+            return solutions;
+        }
+        
+        // 获取预售状态文本
+        function getPresaleStatusText(status) {
+            const statusMap = {
+                0: '未开始',
+                1: '进行中',
+                2: '已结束',
+                3: '交易中',
+                4: '解锁中',
+                5: '已完成'
+            };
+            return statusMap[status] || `未知状态(${status})`;
+        }
+        
+        // 显示状态
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            const statusText = document.getElementById('statusText');
+            
+            statusText.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+        }
+        
+        // 显示结果
+        function displayResults(results) {
+            const resultsDiv = document.getElementById('results');
+            
+            let html = `
+                <div class="result-section">
+                    <h3>📊 诊断结果总览</h3>
+                    <p><strong>预售合约地址:</strong> <span id="address">${results.presaleAddress}</span> <button class="copy-button" onclick="copyToClipboard('${results.presaleAddress}')">复制</button></p>
+                    <p><strong>诊断时间:</strong> ${new Date(results.timestamp).toLocaleString()}</p>
+                </div>
+            `;
+            
+            // 预售状态
+            if (results.presaleStatus) {
+                html += `
+                    <div class="result-section">
+                        <h3>📋 预售状态</h3>
+                        <p><strong>当前状态:</strong> ${results.presaleStatus.presaleStatusText} (${results.presaleStatus.presaleStatus})</p>
+                        <p><strong>是否已完成:</strong> ${results.presaleStatus.isFinalized ? '是' : '否'}</p>
+                        <p><strong>自动完成:</strong> ${results.presaleStatus.autoEnabled ? '启用' : '禁用'}</p>
+                        <p><strong>流动性已添加:</strong> ${results.presaleStatus.liquidityAdded ? '是' : '否'}</p>
+                    </div>
+                `;
+            }
+            
+            // 代币状态
+            if (results.tokenStatus) {
+                html += `
+                    <div class="result-section">
+                        <h3>🪙 代币状态</h3>
+                        ${results.tokenStatus.error ? 
+                            `<p class="error">❌ ${results.tokenStatus.error}</p>` :
+                            `<p><strong>代币地址:</strong> <span id="tokenAddress">${results.tokenStatus.tokenAddress}</span> <button class="copy-button" onclick="copyToClipboard('${results.tokenStatus.tokenAddress}')">复制</button></p>
+                             <p><strong>代币名称:</strong> ${results.tokenStatus.tokenName}</p>
+                             <p><strong>代币符号:</strong> ${results.tokenStatus.tokenSymbol}</p>
+                             <p><strong>代币精度:</strong> ${results.tokenStatus.tokenDecimals}</p>
+                             <p><strong>总供应量:</strong> ${results.tokenStatus.totalSupply}</p>`
+                        }
+                    </div>
+                `;
+            }
+            
+            // 工厂状态
+            if (results.factoryStatus) {
+                html += `
+                    <div class="result-section">
+                        <h3>🏭 工厂授权状态</h3>
+                        ${results.factoryStatus.error ? 
+                            `<p class="error">❌ ${results.factoryStatus.error}</p>` :
+                            `<p><strong>工厂地址:</strong> <span id="factoryAddress">${results.factoryStatus.factoryAddress}</span> <button class="copy-button" onclick="copyToClipboard('${results.factoryStatus.factoryAddress}')">复制</button></p>
+                             <p><strong>授权额度:</strong> ${results.factoryStatus.allowanceFormatted} (${results.factoryStatus.allowance})</p>`
+                        }
+                    </div>
+                `;
+            }
+            
+            // 余额状态
+            if (results.balanceStatus) {
+                html += `
+                    <div class="result-section">
+                        <h3>💰 合约余额</h3>
+                        ${results.balanceStatus.error ? 
+                            `<p class="error">❌ ${results.balanceStatus.error}</p>` :
+                            `<p><strong>代币余额:</strong> ${results.balanceStatus.tokenBalanceFormatted} (${results.balanceStatus.tokenBalance})</p>
+                             <p><strong>BNB余额:</strong> ${results.balanceStatus.bnbBalanceFormatted} (${results.balanceStatus.bnbBalance})</p>
+                             <p><strong>累积BNB:</strong> ${results.balanceStatus.accumulatedBNBFormatted} (${results.balanceStatus.accumulatedBNB})</p>`
+                        }
+                    </div>
+                `;
+            }
+            
+            // 问题分析
+            if (results.issues && results.issues.length > 0) {
+                html += `
+                    <div class="result-section">
+                        <h3>🚨 发现的问题</h3>
+                        ${results.issues.map(issue => `
+                            <div class="issue-item ${issue.severity}">
+                                <strong>${getIssueTypeText(issue.type)}</strong><br>
+                                ${issue.message}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="result-section">
+                        <h3>✅ 问题检查</h3>
+                        <p class="success">未发现明显问题，预售状态正常。</p>
+                    </div>
+                `;
+            }
+            
+            // 解决方案
+            if (results.solutions && results.solutions.length > 0) {
+                html += `
+                    <div class="result-section">
+                        <h3>💡 解决方案</h3>
+                        ${results.solutions.map(solution => `
+                            <div class="solution-item">
+                                <strong>问题类型:</strong> ${getIssueTypeText(solution.issue)}<br>
+                                <strong>解决方案:</strong> ${solution.solution}<br>
+                                ${solution.steps ? `
+                                    <strong>具体步骤:</strong>
+                                    <ol class="solution-steps">
+                                        ${solution.steps.map(step => `<li>${step}</li>`).join('')}
+                                    </ol>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            resultsDiv.innerHTML = html;
+            resultsDiv.style.display = 'block';
+        }
+        
+        // 获取问题类型文本
+        function getIssueTypeText(type) {
+            const typeMap = {
+                'PRESALE_STATUS_ERROR': '预售状态错误',
+                'PRESALE_NOT_ENDED': '预售未结束',
+                'PRESALE_ALREADY_FINALIZED': '预售已完成',
+                'TOKEN_STATUS_ERROR': '代币状态错误',
+                'TOKEN_ADDRESS_INVALID': '代币地址无效',
+                'FACTORY_STATUS_ERROR': '工厂状态错误',
+                'FACTORY_ADDRESS_INVALID': '工厂地址无效',
+                'NO_FACTORY_ALLOWANCE': '无工厂授权',
+                'BALANCE_STATUS_ERROR': '余额状态错误',
+                'NO_ACCUMULATED_BNB': '无累积BNB',
+                'TRANSFER_FROM_FAILED_ROOT_CAUSE': 'TRANSFER_FROM_FAILED 根本原因'
+            };
+            return typeMap[type] || type;
+        }
+        
+        // 复制到剪贴板
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('已复制到剪贴板: ' + text);
+            }).catch(err => {
+                console.error('复制失败:', err);
+                // 备用方案
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('已复制到剪贴板: ' + text);
+            });
+        }
+        
+        // 清除结果
+        function clearResults() {
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('status').style.display = 'none';
+            document.getElementById('presaleAddress').value = '';
+            diagnosticResults = null;
+        }
+        
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔧 预售流动性问题诊断工具已加载');
+            console.log('💡 请确保已连接 TronLink 钱包');
+            
+            // 检查 TronWeb 是否可用
+            if (typeof window.tronWeb !== 'undefined') {
+                showStatus('✅ TronWeb 已连接，可以开始诊断', 'success');
+            } else {
+                showStatus('⚠️ 请先连接 TronLink 钱包', 'warning');
+            }
+        });
+    </script>
+</body>
+</html>

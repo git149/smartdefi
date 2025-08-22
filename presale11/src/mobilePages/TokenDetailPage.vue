@@ -2167,6 +2167,15 @@ export default {
           end: this.consoleEndPresale.bind(this),
           // 检查管理员权限
           checkOwner: this.consoleCheckOwner.bind(this),
+          // 流动性管理
+          addLiquidity: this.consoleAddLiquidity.bind(this),
+          getLiquidityStatus: this.consoleGetLiquidityStatus.bind(this),
+          configureLiquidity: this.consoleConfigureLiquidity.bind(this),
+          // 代币转移管理
+          transferTokens: this.consoleTransferTokens.bind(this),
+          getTokenTransferStatus: this.consoleGetTokenTransferStatus.bind(this),
+          // 合约配置管理
+          setFactoryAddress: this.consoleSetFactoryAddress.bind(this),
           // 帮助信息
           help: this.consoleShowHelp.bind(this)
         };
@@ -2216,6 +2225,18 @@ export default {
 🎛️ 管理命令（仅管理员）：
   presaleAdmin.start()         - 开启预售（设置状态为1）
   presaleAdmin.end()           - 结束预售（设置状态为2）
+
+💧 流动性管理命令（仅管理员）：
+  presaleAdmin.addLiquidity()  - 一键添加流动性（推荐）
+  presaleAdmin.configureLiquidity() - 配置流动性参数
+  presaleAdmin.getLiquidityStatus() - 查询流动性状态
+
+🪙 代币转移管理命令（仅管理员）：
+  presaleAdmin.transferTokens() - 执行代币转移（从工厂到预售合约）
+  presaleAdmin.getTokenTransferStatus() - 查询代币转移状态
+
+🔧 合约配置管理命令（仅管理员）：
+  presaleAdmin.setFactoryAddress() - 设置工厂合约地址
 
 📖 其他命令：
   presaleAdmin.help()          - 显示此帮助信息
@@ -2589,6 +2610,432 @@ ${processedBNB ? `
         console.error('❌ 检查管理员权限失败:', error);
         console.error('💡 请确保钱包已连接且网络正常');
         return false;
+      }
+    },
+
+    /**
+     * 控制台命令：一键添加流动性
+     * 
+     * 功能说明：
+     * 1. 检查管理员权限
+     * 2. 尝试调用 finalizePresaleAndAddLiquidity 一键完成
+     * 3. 如果失败，自动回退到配置参数后添加
+     * 
+     * 使用方法：presaleAdmin.addLiquidity()
+     * 
+     * 技术要点：
+     * - 使用 PresaleService.sendTransaction() 调用会改变状态的函数
+     * - 实现了完整的错误处理和回退机制
+     * - 支持自动流动性参数配置
+     */
+    async consoleAddLiquidity() {
+      try {
+        console.log('🚀 开始添加流动性...');
+        
+        // 检查管理员权限
+        const isOwner = await this.consoleCheckOwner();
+        if (!isOwner) {
+          console.error('❌ 只有管理员才能添加流动性');
+          return;
+        }
+
+        const presaleAddress = await this.getPresaleContractAddress();
+        if (!presaleAddress) {
+          console.error('❌ 无法获取预售合约地址');
+          return;
+        }
+
+        const presaleService = new PresaleService(presaleAddress);
+        
+        // 尝试调用一键添加流动性函数
+        try {
+          console.log('📞 调用 finalizePresaleAndAddLiquidity...');
+          const result = await presaleService.sendTransaction('finalizePresaleAndAddLiquidity');
+          console.log('✅ 流动性添加成功！', result);
+          return result;
+        } catch (error) {
+          console.log('⚠️ 一键添加失败，尝试配置参数后添加...');
+          
+          // 如果一键添加失败，尝试配置参数后添加
+          await this.consoleConfigureLiquidity();
+          
+          // 再次尝试添加流动性
+          try {
+            const addResult = await presaleService.sendTransaction('addLiquidity');
+            console.log('✅ 流动性添加成功！', addResult);
+            return addResult;
+          } catch (addError) {
+            console.error('❌ 流动性添加失败:', addError.message);
+            throw addError;
+          }
+        }
+      } catch (error) {
+        console.error('❌ 添加流动性失败:', error.message);
+        throw error;
+      }
+    },
+
+    // 控制台命令：配置流动性参数
+    async consoleConfigureLiquidity() {
+      try {
+        console.log('⚙️ 配置流动性参数...');
+        
+        const presaleAddress = await this.getPresaleContractAddress();
+        if (!presaleAddress) {
+          console.error('❌ 无法获取预售合约地址');
+          return;
+        }
+
+        const presaleService = new PresaleService(presaleAddress);
+        
+        // 获取当前合约余额
+        const balances = await presaleService.callMethod('getContractBalances');
+        const bnbBalance = balances.bnbBalance;
+        const tokenBalance = balances.tokenBalance;
+        
+        console.log('📊 当前合约余额:', {
+          BNB: window.tronWeb.fromSun(bnbBalance),
+          Token: tokenBalance
+        });
+        
+        // 配置流动性参数
+        const result = await presaleService.sendTransaction('configureLiquidity', [
+          tokenBalance,           // 代币数量
+          bnbBalance,             // BNB数量
+          500,                    // 滑点保护 (5%)
+          window.tronWeb.defaultAddress.base58 // LP代币接收者
+        ]);
+        
+        console.log('✅ 流动性参数配置成功！', result);
+        return result;
+      } catch (error) {
+        console.error('❌ 配置流动性参数失败:', error.message);
+        throw error;
+      }
+    },
+
+    // 控制台命令：查询流动性状态
+    async consoleGetLiquidityStatus() {
+      try {
+        console.log('🔍 查询流动性状态...');
+        
+        const presaleAddress = await this.getPresaleContractAddress();
+        if (!presaleAddress) {
+          console.error('❌ 无法获取预售合约地址');
+          return;
+        }
+
+        const presaleService = new PresaleService(presaleAddress);
+        
+        // 查询预售完成状态
+        const finalizationStatus = await presaleService.callMethod('getFinalizationStatus');
+        
+        // 查询合约余额
+        const balances = await presaleService.callMethod('getContractBalances');
+        
+        // 查询LP分配配置
+        const lpConfig = await presaleService.callMethod('getLPDistributionConfig');
+        
+        // 查询工厂授权额度
+        const allowance = await presaleService.callMethod('getFactoryAllowance');
+        
+        console.log('💧 流动性状态总览:', {
+          // 预售完成状态
+          isFinalized: finalizationStatus.isFinalized,
+          autoEnabled: finalizationStatus.autoEnabled,
+          tokenAmount: window.tronWeb.fromSun(finalizationStatus.tokenAmount),
+          bnbAmount: window.tronWeb.fromSun(finalizationStatus.bnbAmount),
+          liquidityAdded: finalizationStatus.liquidityAdded_,
+          lpTokens: finalizationStatus.lpTokens,
+          
+          // 合约余额
+          contractTokenBalance: balances.tokenBalance,
+          contractBnbBalance: window.tronWeb.fromSun(balances.bnbBalance),
+          
+          // LP分配配置
+          userLPShare: lpConfig.userShare / 100 + '%',
+          devLPShare: lpConfig.devShare / 100 + '%',
+          lpDistributionEnabled: lpConfig.enabled,
+          
+          // 工厂授权
+          factoryAllowance: window.tronWeb.fromSun(allowance)
+        });
+        
+        return {
+          finalizationStatus,
+          balances,
+          lpConfig,
+          allowance
+        };
+      } catch (error) {
+        console.error('❌ 查询流动性状态失败:', error.message);
+        throw error;
+      }
+    },
+
+    // 控制台命令：代币转移状态查询
+    async consoleGetTokenTransferStatus() {
+      try {
+        console.log('🔍 查询代币转移状态...');
+        
+        const presaleAddress = await this.getPresaleContractAddress();
+        if (!presaleAddress) {
+          console.error('❌ 无法获取预售合约地址');
+          return null;
+        }
+
+        const presaleService = new PresaleService(presaleAddress);
+        
+        // 查询预售状态
+        const presaleStatus = await presaleService.callMethod('presaleStatus');
+        
+        // 查询合约余额
+        const balances = await presaleService.callMethod('getContractBalances');
+        
+        // 查询工厂授权额度
+        const allowance = await presaleService.callMethod('getFactoryAllowance');
+        
+        // 查询代币地址
+        const tokenAddress = await presaleService.callMethod('coinAddress');
+        
+        // 查询预售完成状态
+        const finalizationStatus = await presaleService.callMethod('getFinalizationStatus');
+        
+        console.log('🪙 代币转移状态总览:', {
+          // 预售状态
+          presaleStatus: Number(presaleStatus),
+          presaleStatusText: this.getPresaleStatusText ? this.getPresaleStatusText(Number(presaleStatus)) : `状态${Number(presaleStatus)}`,
+          
+          // 合约余额
+          contractTokenBalance: balances.tokenBalance,
+          contractBnbBalance: window.tronWeb.fromSun(balances.bnbBalance),
+          
+          // 工厂授权
+          factoryAllowance: window.tronWeb.fromSun(allowance),
+          
+          // 代币信息
+          tokenAddress: tokenAddress,
+          
+          // 预售完成状态
+          isFinalized: finalizationStatus.isFinalized,
+          autoEnabled: finalizationStatus.autoEnabled,
+          liquidityAdded: finalizationStatus.liquidityAdded_,
+          
+          // 分析结果
+          canTransfer: Number(presaleStatus) >= 2 && Number(balances.tokenBalance) === 0 && Number(allowance) > 0,
+          transferReason: this.getTransferReason(Number(presaleStatus), Number(balances.tokenBalance), Number(allowance))
+        });
+        
+        const result = {
+          presaleStatus,
+          balances,
+          allowance,
+          tokenAddress,
+          finalizationStatus,
+          canTransfer: Number(presaleStatus) >= 2 && Number(balances.tokenBalance) === 0 && Number(allowance) > 0,
+          transferReason: this.getTransferReason(Number(presaleStatus), Number(balances.tokenBalance), Number(allowance))
+        };
+        
+        return result;
+      } catch (error) {
+        console.error('❌ 查询代币转移状态失败:', error.message);
+        throw error;
+      }
+    },
+
+    // 控制台命令：执行代币转移
+    async consoleTransferTokens() {
+      try {
+        console.log('🚀 开始执行代币转移...');
+        
+        // 检查管理员权限
+        const isOwner = await this.consoleCheckOwner();
+        if (!isOwner) {
+          console.error('❌ 只有管理员才能执行代币转移');
+          return;
+        }
+
+        const presaleAddress = await this.getPresaleContractAddress();
+        if (!presaleAddress) {
+          console.error('❌ 无法获取预售合约地址');
+          return;
+        }
+
+        const presaleService = new PresaleService(presaleAddress);
+        
+        // 先查询当前状态
+        console.log('📊 查询当前状态...');
+        const status = await this.consoleGetTokenTransferStatus();
+        
+        if (!status.canTransfer) {
+          console.error('❌ 当前状态不允许代币转移:', status.transferReason);
+          return;
+        }
+        
+        console.log('✅ 状态检查通过，开始执行代币转移...');
+        
+        // 调用完成预售函数来触发代币转移
+        try {
+          console.log('📞 调用 finalizePresaleAndAddLiquidity...');
+          const result = await presaleService.sendTransaction('finalizePresaleAndAddLiquidity');
+          console.log('✅ 代币转移成功！', result);
+          
+          // 等待一下让交易确认
+          console.log('⏳ 等待交易确认...');
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          
+          // 再次查询状态确认转移结果
+          console.log('🔍 验证转移结果...');
+          const newStatus = await this.consoleGetTokenTransferStatus();
+          
+          if (Number(newStatus.balances.tokenBalance) > 0) {
+            console.log('🎉 代币转移完成！现在可以添加流动性了');
+            console.log('💡 使用 presaleAdmin.addLiquidity() 添加流动性');
+          } else {
+            console.log('⚠️ 代币转移可能还在处理中，请稍后再试');
+          }
+          
+          return result;
+          
+        } catch (error) {
+          console.error('❌ 代币转移失败:', error.message);
+          
+          // 如果是LP接收地址未设置，尝试配置流动性参数
+          if (error.message.includes('LP receiver not set')) {
+            console.log('🔄 检测到LP接收地址未设置，尝试配置流动性参数...');
+            await this.consoleConfigureLiquidity();
+            
+            // 再次尝试代币转移
+            console.log('🔄 重新尝试代币转移...');
+            const retryResult = await presaleService.sendTransaction('finalizePresaleAndAddLiquidity');
+            console.log('✅ 代币转移重试成功！', retryResult);
+            return retryResult;
+          }
+          
+          throw error;
+        }
+      } catch (error) {
+        console.error('❌ 执行代币转移失败:', error.message);
+        throw error;
+      }
+    },
+
+    // 获取预售状态文本
+    getPresaleStatusText(status) {
+      switch (Number(status)) {
+        case 0:
+          return '未开始';
+        case 1:
+          return '进行中';
+        case 2:
+          return '已结束';
+        default:
+          return `未知状态(${status})`;
+      }
+    },
+
+    // 获取代币转移原因说明
+    getTransferReason(presaleStatus, tokenBalance, allowance) {
+      if (presaleStatus < 2) {
+        return '预售尚未结束，无法转移代币';
+      }
+      if (tokenBalance > 0) {
+        return '代币已转移，无需重复操作';
+      }
+      if (allowance === 0) {
+        return '工厂未授权代币，请联系管理员';
+      }
+      return '可以执行代币转移';
+    },
+
+    // 控制台命令：设置工厂合约地址
+    async consoleSetFactoryAddress() {
+      try {
+        console.log('🔧 开始设置工厂合约地址...');
+        
+        // 检查管理员权限
+        const isOwner = await this.consoleCheckOwner();
+        if (!isOwner) {
+          console.error('❌ 只有管理员才能设置工厂地址');
+          return;
+        }
+
+        const presaleAddress = await this.getPresaleContractAddress();
+        if (!presaleAddress) {
+          console.error('❌ 无法获取预售合约地址');
+          return;
+        }
+
+        // 工厂合约地址（从环境变量获取）
+        const factoryAddress = 'TLatoE81PZH9obc7iba4SkMzss3L5e4ap5';
+        console.log('🏭 目标工厂地址:', factoryAddress);
+
+        const presaleService = new PresaleService(presaleAddress);
+        
+        try {
+          // 检查当前工厂地址
+          const currentFactoryAddress = await presaleService.callMethod('factoryAddress');
+          console.log('📍 当前工厂地址:', currentFactoryAddress);
+          
+          if (currentFactoryAddress === '0x0000000000000000000000000000000000000000') {
+            console.log('🔄 工厂地址未设置，开始设置...');
+            
+            // 设置工厂地址
+            const result = await presaleService.sendTransaction('setFactoryAddress', [factoryAddress]);
+            console.log('✅ 工厂地址设置成功！', result);
+            
+            // 等待交易确认
+            console.log('⏳ 等待交易确认...');
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            
+            // 验证设置结果
+            const newFactoryAddress = await presaleService.callMethod('factoryAddress');
+            console.log('🔍 验证结果 - 新工厂地址:', newFactoryAddress);
+            
+            if (newFactoryAddress === factoryAddress) {
+              console.log('🎉 工厂地址设置完成！现在可以继续配置流动性了');
+              console.log('💡 下一步：使用 presaleAdmin.configureLiquidity() 配置流动性');
+            } else {
+              console.log('⚠️ 工厂地址设置可能还在处理中，请稍后再试');
+            }
+            
+          } else {
+            console.log('ℹ️ 工厂地址已设置:', currentFactoryAddress);
+            if (currentFactoryAddress === factoryAddress) {
+              console.log('✅ 工厂地址正确，无需重复设置');
+            } else {
+              console.log('⚠️ 工厂地址不匹配，当前:', currentFactoryAddress, '目标:', factoryAddress);
+              console.log('🔄 检测到地址不匹配，开始更新工厂地址...');
+              
+              // 强制更新工厂地址
+              const updateResult = await presaleService.sendTransaction('setFactoryAddress', [factoryAddress]);
+              console.log('✅ 工厂地址更新成功！', updateResult);
+              
+              // 等待交易确认
+              console.log('⏳ 等待交易确认...');
+              await new Promise(resolve => setTimeout(resolve, 5000));
+              
+              // 验证更新结果
+              const updatedFactoryAddress = await presaleService.callMethod('factoryAddress');
+              console.log('🔍 验证结果 - 更新后的工厂地址:', updatedFactoryAddress);
+              
+              if (updatedFactoryAddress === factoryAddress) {
+                console.log('🎉 工厂地址更新完成！现在可以继续配置流动性了');
+                console.log('💡 下一步：使用 presaleAdmin.configureLiquidity() 配置流动性');
+              } else {
+                console.log('⚠️ 工厂地址更新可能还在处理中，请稍后再试');
+              }
+            }
+          }
+          
+        } catch (error) {
+          console.error('❌ 设置工厂地址失败:', error.message);
+          throw error;
+        }
+        
+      } catch (error) {
+        console.error('❌ 执行设置工厂地址失败:', error.message);
+        throw error;
       }
     },
 

@@ -138,7 +138,7 @@ const COMPLETE_ABI = [
 // 合约地址（支持从窗口变量覆盖）
 let CONTRACT_ADDRESS = (typeof window !== 'undefined' && window.TRON_FACTORY_ADDRESS)
   ? window.TRON_FACTORY_ADDRESS
-  : 'TGUUgCztEyXDwEyigoAAZP9HxWC6VdiKDj';
+  : 'TLatoE81PZH9obc7iba4SkMzss3L5e4ap5';
 
 // 运行时切换工厂地址
 function setFactoryAddress(addr) {

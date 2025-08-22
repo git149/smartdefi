@@ -1,0 +1,33 @@
+/* Global Tron UI variables for neon cyber theme */
+:root {
+  /* colors */
+  --clr-text: #ffffff;
+  --clr-muted: #cfe1ff;
+  --clr-label: #9aa4ff;
+  --clr-accent: #00d4ff; /* neon blue */
+  --clr-accent-2: #8a2be2; /* purple */
+  --clr-success: #00ff88; /* green for gains */
+  --clr-warn: #ff8c00;    /* orange emphasis */
+  --clr-bg-dark-1: #0f0f23;
+  --clr-bg-dark-2: #1a1a2e;
+
+  /* radii */
+  --radius-pill: 999px;
+  --radius-card: 12px;
+
+  /* spacing */
+  --space-1: 6px;  
+  --space-2: 8px;  
+  --space-3: 12px; 
+  --space-4: 16px;
+
+  /* fonts */
+  --font-12: 12px; --font-13: 13px; --font-14: 14px; --font-16: 16px; --font-18: 18px; --font-20: 20px;
+
+  /* shadows */
+  --shadow-soft: 0 8px 24px rgba(0,0,0,0.25);
+  --shadow-glow-accent: 0 0 14px rgba(0,212,255,0.35);
+  --shadow-glow-purple: 0 0 16px rgba(138,43,226,0.18);
+  --shadow-glow-green: 0 0 12px rgba(0,255,136,0.35);
+}
+

@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Launch RWA 组件演示</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            padding: 20px;
+            margin: 0;
+        }
+        
+        .demo-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .demo-title {
+            text-align: center;
+            color: #ffffff;
+            margin-bottom: 30px;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        .launch-rwa {
+            padding: 20px;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%);
+            min-height: 400px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .top-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+        }
+
+        .menu-button {
+            width: 48px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 0 12px rgba(0,212,255,0.22);
+        }
+
+        .menu-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+            border-color: rgba(0, 212, 255, 0.5);
+        }
+
+        .dots-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 4px;
+            width: 24px;
+            height: 24px;
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            background: #ffffff;
+            border-radius: 50%;
+            opacity: 0.8;
+        }
+
+        .right-section {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 16px;
+            margin-top: 0;
+        }
+
+        .launch-button {
+            background: linear-gradient(45deg, #8a2be2, #00d4ff);
+            background-size: 200% 200%;
+            border: none;
+            border-radius: 25px;
+            padding: 14px 28px;
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(138, 43, 226, 0.3);
+            animation: gradient-shift 3s ease infinite;
+        }
+
+        .launch-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(138, 43, 226, 0.4);
+        }
+
+        @keyframes gradient-shift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .fundraising-info {
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 10px 14px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(10px);
+            min-width: 140px;
+            text-align: center;
+            margin-top: 8px;
+            box-shadow: 0 0 12px rgba(0,212,255,0.18);
+        }
+
+        .fundraising-label {
+            color: #888;
+            font-size: 11px;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .fundraising-amount {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .amount {
+            font-size: 18px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .currency {
+            font-size: 14px;
+            color: #00d4ff;
+            font-weight: 600;
+        }
+
+        .tron-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+        }
+
+        .tron-logo svg {
+            filter: drop-shadow(0 0 4px rgba(255, 0, 0, 0.6));
+        }
+
+        .main-card {
+            position: relative;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 16px;
+            overflow: hidden;
+            min-height: 280px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .cyberpunk-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1;
+            background: linear-gradient(180deg, #0a0a1a 0%, #1a1a2e 50%, #16213e 100%);
+        }
+
+        .city-silhouette {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60%;
+        }
+
+        .building {
+            position: absolute;
+            bottom: 0;
+            background: linear-gradient(180deg, #2a2a4a 0%, #1a1a3a 100%);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+        }
+
+        .building-1 { left: 10%; width: 8%; height: 80%; border-radius: 4px 4px 0 0; }
+        .building-2 { left: 20%; width: 6%; height: 60%; border-radius: 4px 4px 0 0; }
+        .building-3 { left: 30%; width: 10%; height: 90%; border-radius: 4px 4px 0 0; }
+        .building-4 { left: 50%; width: 12%; height: 70%; border-radius: 4px 4px 0 0; }
+        .building-5 { left: 70%; width: 8%; height: 50%; border-radius: 4px 4px 0 0; }
+
+        .neon-lights {
+            position: absolute;
+            top: 20%;
+            left: 0;
+            right: 0;
+            height: 20%;
+        }
+
+        .neon-line {
+            position: absolute;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00d4ff, transparent);
+            animation: neon-pulse 2s ease-in-out infinite;
+        }
+
+        .neon-line-1 { top: 0; left: 20%; right: 20%; animation-delay: 0s; }
+        .neon-line-2 { top: 50%; left: 10%; right: 10%; animation-delay: 0.5s; }
+        .neon-line-3 { top: 100%; left: 30%; right: 30%; animation-delay: 1s; }
+
+        @keyframes neon-pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        .floating-elements {
+            position: absolute;
+            top: 15%;
+            left: 0;
+            right: 0;
+        }
+
+        .element {
+            position: absolute;
+            color: #00d4ff;
+            font-size: 12px;
+            font-weight: 600;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.8);
+            animation: float 4s ease-in-out infinite;
+        }
+
+        .element-1 { left: 15%; animation-delay: 0s; }
+        .element-2 { right: 20%; animation-delay: 2s; }
+        .element-3 { left: 50%; top: 30%; animation-delay: 1s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .card-content {
+            position: relative;
+            z-index: 2;
+            padding: 24px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .project-description {
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 600;
+            line-height: 1.4;
+            max-width: 85%;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .pager-dots {
+            position: absolute;
+            bottom: 12px;
+            left: 20px;
+            color: rgba(255, 255, 255, 0.8);
+            letter-spacing: 4px;
+            font-size: 16px;
+        }
+
+        .detail-button.top-right {
+            top: 16px;
+            right: 16px;
+            bottom: auto;
+            left: auto;
+            position: absolute;
+            width: 48px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .detail-button.top-right:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+            border-color: rgba(0, 212, 255, 0.5);
+        }
+
+        .arrow-icon {
+            font-size: 20px;
+            color: #ffffff;
+            font-weight: bold;
+        }
+
+        .feature-list {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .feature-list h3 {
+            color: #00d4ff;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .feature-list ul {
+            color: #ccc;
+            line-height: 1.8;
+            padding-left: 20px;
+        }
+
+        .feature-list li {
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1 class="demo-title">Launch RWA 组件演示</h1>
+        
+        <!-- Launch RWA 组件 -->
+        <div class="launch-rwa">
+            <div class="top-section">
+                <div class="menu-button" onclick="handleMenuClick()">
+                    <div class="dots-container">
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                    </div>
+                </div>
+
+                <div class="right-section">
+                    <button class="launch-button" onclick="handleLaunchClick()">
+                        Launch RWA
+                    </button>
+
+                    <div class="fundraising-info">
+                        <div class="fundraising-label">Fundraising</div>
+                        <div class="fundraising-amount">
+                            <span class="amount">2300</span>
+                            <span class="currency">TRX</span>
+                            <div class="tron-logo">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                    <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="#FF0000"/>
+                                    <path d="M2 17L12 22L22 17" fill="#FF0000"/>
+                                    <path d="M2 12L12 17L22 12" fill="#FF0000"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="main-card">
+                <div class="cyberpunk-bg">
+                    <div class="city-silhouette">
+                        <div class="building building-1"></div>
+                        <div class="building building-2"></div>
+                        <div class="building building-3"></div>
+                        <div class="building building-4"></div>
+                        <div class="building building-5"></div>
+                    </div>
+                    
+                    <div class="neon-lights">
+                        <div class="neon-line neon-line-1"></div>
+                        <div class="neon-line neon-line-2"></div>
+                        <div class="neon-line neon-line-3"></div>
+                    </div>
+                    
+                    <div class="floating-elements">
+                        <div class="element element-1">UNFHL</div>
+                        <div class="element element-2">SPETUN</div>
+                        <div class="element element-3">2013</div>
+                    </div>
+                </div>
+
+                <div class="card-content">
+                    <div class="project-description">
+                        TRX PUMP and CHOU launch the first Chinese celebrity coin: CHOU
+                    </div>
+
+                    <div class="pager-dots">...</div>
+
+                    <button class="detail-button top-right" onclick="handleDetailClick()">
+                        <div class="arrow-icon">→</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="feature-list">
+            <h3>🎨 主要优化特性</h3>
+            <ul>
+                <li><strong>赛博朋克背景：</strong>添加了动态的城市剪影、霓虹灯效果和浮动元素</li>
+                <li><strong>优化的募资信息：</strong>使用SVG图标替代emoji，更好的视觉层次</li>
+                <li><strong>渐变按钮：</strong>Launch RWA按钮使用紫色到青色的渐变，带有动画效果</li>
+                <li><strong>响应式设计：</strong>支持移动端和桌面端的自适应布局</li>
+                <li><strong>交互效果：</strong>悬停动画、阴影效果和过渡动画</li>
+                <li><strong>视觉层次：</strong>更好的对比度和可读性</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function handleMenuClick() {
+            alert('菜单按钮被点击！');
+        }
+
+        function handleLaunchClick() {
+            alert('Launch RWA 按钮被点击！');
+        }
+
+        function handleDetailClick() {
+            alert('详情按钮被点击！');
+        }
+    </script>
+</body>
+</html>

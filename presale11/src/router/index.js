@@ -32,34 +32,14 @@ export default [
         component: resolve => require(['../views/TronExample.vue'], resolve)
     },
     {
-        path: '/fee-presale-settings', name: 'feePresaleSettings',
-        component: resolve => require(['../views/FeeAndPresaleSettings.vue'], resolve)
+        path: '/homepage', name: 'homepage',
+        component: resolve => require(['../tron/shouye/homepage.vue'], resolve)
     },
-    {
-        path: '/advanced-token-creation', name: 'advancedTokenCreation',
-        component: resolve => require(['../views/AdvancedTokenCreation.vue'], resolve)
-    },
-    {
-        path: '/presale-manager', name: 'presaleManager',
-        component: resolve => require(['../tron/components/PresaleManager.vue'], resolve)
-    },  
-    {
-        path: '/token-unlock', name: 'tokenUnlock',
-        component: resolve => require(['../tron/components/TokenUnlock.vue'], resolve)
-    },
+ 
     {
         path: '/token-marketplace', name: 'tokenMarketplace',
         component: resolve => require(['../mobilePages/tokenMarketplace.vue'], resolve)
     },
-    {
-        path: '/token-marketplace-test', name: 'tokenMarketplaceTest',
-        component: resolve => require(['../views/TokenMarketplaceTest.vue'], resolve)
-    },
-    {
-        path: '/project-selector', name: 'projectSelector',
-        component: resolve => require(['../tron/components/ProjectSelector.vue'], resolve)
-    },
-  
  
     {
         path: '/token-detail/:id?', name: 'tokenDetail',

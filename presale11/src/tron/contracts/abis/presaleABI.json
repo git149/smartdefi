@@ -2387,5 +2387,96 @@
     {
         "stateMutability": "payable",
         "type": "receive"
-    }
+    },
+        {
+            "inputs": [],
+            "name": "slippageProtection",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "lpTokenReceiver",
+            "outputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "totalLPTokens",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        
+        {
+            "inputs": [],
+            "name": "validateFactoryAuthorization",
+            "outputs": [
+                {
+                    "internalType": "bool",
+                    "name": "hasAuthorization",
+                    "type": "bool"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "authorizedAmount",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "contractBalance",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        
+        {
+            "inputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "_slippage",
+                    "type": "uint256"
+                }
+            ],
+            "name": "setSlippageProtection",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_lpReceiver",
+                    "type": "address"
+                }
+            ],
+            "name": "setLPReceiver",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        }
+    
 ]

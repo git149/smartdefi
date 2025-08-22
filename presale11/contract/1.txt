@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "./OpenZeppelinDependencies.sol";
 import "./Interfaces.sol";
 import "./Token.sol";
 
@@ -35,31 +32,29 @@ library TransferHelper {
 }
 
 
-interface CCoin {
-    function pairUSDT() external pure returns (address);
-}
-
 contract PRESALE is Ownable, ReentrancyGuard {
     using Address for address;
     //bsc测试网
-    address public USDT = 0x7ef95a0FEE0Dd31b22626fA2e10Ee6A223F8a684;
-    IPancakeRouter02 router = IPancakeRouter02(0x87FD5305E6a40F378da124864B2D479c2028BD86);
+    IPancakeRouter02 router = IPancakeRouter02(0x81839E7bCcDc7D5f50419bC34209d8ae5969Ef66);
 
     // BSC测试网PancakeSwap路由器
     address public coinAddress;
     address public lpAddress;
+    address public USDT = 0xECa9bC828A3005B9a3b909f2cc5c2a54794DE05F;
+
+    // 获取usdt价格地址
+    address public constant PANCAKE_FACTORY = 0x87FD5305E6a40F378da124864B2D479c2028BD86;
+    address public constant WBNB = 0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd;
+
 
     // === 流动性管理相关状态变量 ===
     address public factoryAddress;              // 工厂合约地址
     bool public liquidityAdded = false;         // 防重复添加流动性标志
     uint256 public slippageProtection = 500;    // 滑点保护 5% = 500/10000
     uint256 public liquidityTokenAmount;        // 用于流动性的代币数量
-    uint256 public liquidityUSDTAmount;         // 用于流动性的USDT数量
+    uint256 public liquidityBNBAmount;          // 用于流动性的BNB数量
     address public lpTokenReceiver;             // LP代币接收地址
     uint256 public totalLPTokens;               // 总LP代币数量
-
-    // === 流动性管理（简化为BNB模式） ===
-    uint256 public liquidityBNBAmount;                        // 用于BNB流动性的BNB数量
 
     mapping(address=>bool) public managerList;
     mapping(address => preSaleStruct) public preSaleAddress;
@@ -83,16 +78,15 @@ contract PRESALE is Ownable, ReentrancyGuard {
     uint256 public totalPresaleBNB = 0;         // 预售阶段累积的BNB
     bool public bnbAccumulationEnabled = true;   // BNB累积开关
 
-    // === BNB转换USDT相关状态变量 ===
-    uint256 public convertedUSDT = 0;           // 已转换的USDT数量
-    uint256 public conversionSlippage = 300;    // 转换滑点保护 3% = 300/10000
-    bool public conversionEnabled = true;       // 转换功能开关
-    uint256 public minConversionAmount = 0.1 ether; // 最小转换金额
+    // === BNB流动性相关状态变量 ===
+    uint256 public processedBNB = 0;            // 已处理的BNB数量
+    uint256 public liquiditySlippage = 300;     // 流动性滑点保护 3% = 300/10000
+    bool public liquidityEnabled = true;        // 流动性功能开关
+    uint256 public minLiquidityAmount = 0.1 *10**6; // 最小流动性金额
 
     // === 预售完成流程相关状态变量 ===
     bool public presaleFinalized = false;      // 预售是否已完成处理
     uint256 public finalizedTokenAmount = 0;   // 最终用于流动性的代币数量
-    uint256 public finalizedUSDTAmount = 0;    // 最终用于流动性的USDT数量
     bool public autoFinalizationEnabled = true; // 自动完成开关
 
     uint256 public presaleStatus = 0;
@@ -100,12 +94,37 @@ contract PRESALE is Ownable, ReentrancyGuard {
      
     uint256 public nowStage = 0;
     uint256 public stageUnlockRate = 10;
-    uint256 public marketDisAmount = 1500000 ether;
+    uint256 public marketDisAmount = 1500000 *10**6;
     uint256 public lastMarketAmount = 0;
 
     uint256 public feeTotal = 8000;
 
     uint256 public maxInsideNum = 1;
+
+    // === LP分配机制相关状态变量 ===
+    uint256 public userLPShare = 8000;        // 用户LP分配比例 (80% = 8000/10000)
+    uint256 public devLPShare = 2000;         // 开发团队LP分配比例 (20% = 2000/10000)
+    address public devLPReceiver;             // 开发团队LP接收地址
+    uint256 public constant LP_SHARE_BASE = 10000; // 分配比例基数
+    bool public lpDistributionEnabled = false; // LP分配功能开关
+
+    // === LGE集成：Vesting释放机制 ===
+    uint256 public vestingDelay = 7 days;     // 释放延迟（7-90天）
+    uint256 public vestingRate = 10;          // 释放比例（5-20%）
+    uint256 public lastVestingTime;           // 上次释放时间
+    uint256 public totalVestedAmount;         // 总已释放数量
+    bool public vestingEnabled = false;       // 是否启用vesting
+    mapping(address => uint256) public userVestedClaimed; // 用户已领取的vested数量
+
+    // === LGE集成：Backing资产支撑机制 ===
+    uint256 public backingShare = 0;          // 资产支撑份额（0-50%）
+    address public backingReceiver;           // 资产支撑接收地址
+    uint256 public totalBackingAllocated;     // 总分配的backing资金
+
+    // === LGE集成：时间控制和限制 ===
+    uint256 public startTime;                 // 预售开始时间
+    uint256 public hardcap;                   // 硬顶限制
+    uint256 public maxBuyPerWallet;           // 每个钱包最大购买量
 
     struct preSaleStruct{
         address user;
@@ -121,20 +140,20 @@ contract PRESALE is Ownable, ReentrancyGuard {
     // === 流动性管理相关事件 ===
     event LiquidityAdded(
         uint256 tokenAmount,
-        uint256 usdtAmount,
+        uint256 bnbAmount,
         uint256 liquidityTokens,
         address indexed receiver
     );
 
     event LiquidityConfigured(
         uint256 tokenAmount,
-        uint256 usdtAmount,
+        uint256 bnbAmount,
         uint256 slippage,
         address indexed receiver
     );
 
     event FactoryAddressSet(address indexed oldFactory, address indexed newFactory);
-    event LiquidityFailed(string reason, uint256 tokenAmount, uint256 usdtAmount);
+    event LiquidityFailed(string reason, uint256 tokenAmount, uint256 bnbAmount);
 
     // === BNB流动性相关事件 ===
     event BNBLiquidityAdded(
@@ -148,27 +167,38 @@ contract PRESALE is Ownable, ReentrancyGuard {
     event BNBAccumulated(address indexed user, uint256 amount, uint256 totalAccumulated);
     event BNBAccumulationToggled(bool oldEnabled, bool newEnabled);
 
-    // === BNB转换USDT相关事件 ===
-    event BNBConvertedToUSDT(uint256 bnbAmount, uint256 usdtAmount, uint256 totalUSDT);
-    event ConversionConfigUpdated(uint256 slippage, uint256 minAmount, bool enabled);
-    event ConversionFailed(string reason, uint256 bnbAmount);
+    // === BNB流动性相关事件 ===
+    event BNBProcessed(uint256 bnbAmount, uint256 totalProcessed);
+    event LiquidityConfigUpdated(uint256 slippage, uint256 minAmount, bool enabled);
+    event LiquidityProcessFailed(string reason, uint256 bnbAmount);
     event EmergencyWithdraw(string tokenType, uint256 amount, address indexed to);
 
     // === 预售完成流程相关事件 ===
     event PresaleFinalizationStarted(uint256 bnbAmount, uint256 timestamp);
     event TokensReceivedFromFactory(uint256 tokenAmount, address indexed factory);
-    event LiquidityParametersCalculated(uint256 tokenAmount, uint256 usdtAmount);
+    event LiquidityParametersCalculated(uint256 tokenAmount, uint256 bnbAmount);
     event PresaleFinalizationCompleted(
         uint256 tokenAmount,
-        uint256 usdtAmount,
+        uint256 bnbAmount,
         uint256 liquidityTokens,
         address indexed lpReceiver,
         uint256 timestamp
     );
     event PresaleFinalizationFailed(string reason, uint256 step);
 
+    // === LP分配相关事件 ===
+    event LPDistributionSet(uint256 userShare, uint256 devShare, address devReceiver, bool enabled);
+    event LPDistributed(address indexed user, uint256 userAmount, uint256 devAmount, address devReceiver, uint256 timestamp);
+
+    // === LGE集成相关事件 ===
+    event VestingConfigSet(uint256 delay, uint256 rate, bool enabled);
+    event BackingConfigSet(uint256 share, address receiver);
+    event VestedLPClaimed(address indexed user, uint256 amount, uint256 timestamp);
+    event BackingFundsAllocated(uint256 amount, address receiver, uint256 timestamp);
+    event LGEConfigSet(uint256 startTime, uint256 hardcap, uint256 maxBuyPerWallet);
+
     constructor() {
-        setPoolData(0.3 ether, 0.29 ether, 500, 1, 0 ether, 10);
+
     }
     
     modifier onlyManager() {
@@ -179,8 +209,6 @@ contract PRESALE is Ownable, ReentrancyGuard {
     function setManager(address _address , bool isManager) public onlyOwner{
         managerList[_address]=isManager;
     }
-
-
 
     function setVerify(address _addr, bool verify) external onlyOwner payable {
         preSaleStruct memory _p = preSaleAddress[_addr];
@@ -199,7 +227,7 @@ contract PRESALE is Ownable, ReentrancyGuard {
     function setCoinAddress(address _coin) external onlyOwner {
         coinAddress = _coin;
         IPancakeFactory factory = IPancakeFactory(router.factory());
-        lpAddress = factory.getPair(USDT, coinAddress);
+        lpAddress = factory.getPair(router.WETH(), coinAddress);
     }
 
     function setFeeRate(uint256 _feeRate) external onlyOwner {
@@ -211,7 +239,108 @@ contract PRESALE is Ownable, ReentrancyGuard {
         coinAmount = _coinAmount;
     }
 
+    /**
+     * @dev 设置LP分配参数
+     * @param _userShare 用户分配比例 (基于10000)
+     * @param _devShare 开发团队分配比例 (基于10000)
+     * @param _devReceiver 开发团队接收地址
+     * @param _enabled 是否启用LP分配功能
+     */
+    function setLPDistribution(
+        uint256 _userShare,
+        uint256 _devShare,
+        address _devReceiver,
+        bool _enabled
+    ) external onlyOwner {
+        require(_userShare + _devShare == LP_SHARE_BASE, "Invalid shares total");
+        require(_userShare > 0, "User share must be > 0");
+        require(_devShare >= 0, "Dev share must be >= 0");
+
+        if (_enabled && _devShare > 0) {
+            require(_devReceiver != address(0), "Invalid dev receiver");
+            require(_devReceiver != address(this), "Cannot be contract address");
+        }
+
+        userLPShare = _userShare;
+        devLPShare = _devShare;
+        devLPReceiver = _devReceiver;
+        lpDistributionEnabled = _enabled;
+
+        emit LPDistributionSet(_userShare, _devShare, _devReceiver, _enabled);
+    }
+
+    /**
+     * @dev 设置Vesting释放配置（基于LGE参数）
+     * @param _vestingDelay 释放延迟（7-90天）
+     * @param _vestingRate 释放比例（5-20%）
+     * @param _enabled 是否启用vesting功能
+     */
+    function setVestingConfig(
+        uint256 _vestingDelay,
+        uint256 _vestingRate,
+        bool _enabled
+    ) external onlyOwner {
+        require(_vestingDelay >= 7 days && _vestingDelay <= 90 days, "Vesting delay must be 7-90 days");
+        require(_vestingRate >= 5 && _vestingRate <= 20, "Vesting rate must be 5-20%");
+
+        vestingDelay = _vestingDelay;
+        vestingRate = _vestingRate;
+        vestingEnabled = _enabled;
+
+        if (_enabled && lastVestingTime == 0) {
+            lastVestingTime = block.timestamp;
+        }
+
+        emit VestingConfigSet(_vestingDelay, _vestingRate, _enabled);
+    }
+
+    /**
+     * @dev 设置Backing资产支撑配置（基于LGE参数）
+     * @param _backingShare 资产支撑份额（0-50%）
+     * @param _backingReceiver 资产支撑接收地址
+     */
+    function setBackingConfig(
+        uint256 _backingShare,
+        address _backingReceiver
+    ) external onlyOwner {
+        require(_backingShare <= 50, "Backing share must be <=50%");
+
+        if (_backingShare > 0) {
+            require(_backingReceiver != address(0), "Invalid backing receiver");
+            require(_backingReceiver != address(this), "Cannot be contract address");
+        }
+
+        backingShare = _backingShare;
+        backingReceiver = _backingReceiver;
+
+        emit BackingConfigSet(_backingShare, _backingReceiver);
+    }
+
+    /**
+     * @dev 设置LGE基础配置（基于LGE参数）
+     * @param _startTime 预售开始时间
+     * @param _hardcap 硬顶限制
+     * @param _maxBuyPerWallet 每个钱包最大购买量
+     */
+    function setLGEConfig(
+        uint256 _startTime,
+        uint256 _hardcap,
+        uint256 _maxBuyPerWallet
+    ) external onlyOwner {
+        // require(_startTime >= block.timestamp + 0 minutes, "Start time must be at least  minutes from now,TEST");
+        require(_maxBuyPerWallet > 0, "Max buy per wallet must be > 0");
+        require(_hardcap > 0, "Hardcap must be > 0");
+
+        startTime = _startTime;
+        hardcap = _hardcap;
+        maxBuyPerWallet = _maxBuyPerWallet;
+
+        emit LGEConfigSet(_startTime, _hardcap, _maxBuyPerWallet);
+    }
+
     function setPresaleStatus(uint256 _presaleStatus) external onlyOwner {
+        require(_presaleStatus == presaleStatus + 1, "Can only advance to next status");
+        require(_presaleStatus <= 5, "Invalid status value");
         presaleStatus = _presaleStatus;
     }
 
@@ -223,7 +352,6 @@ contract PRESALE is Ownable, ReentrancyGuard {
         maxInsideNum = _maxInsideNum;
     }
 
-
     /**
      * @dev 动态获取代币总供应量
      * @return 代币总供应量，如果获取失败则返回默认值
@@ -231,7 +359,7 @@ contract PRESALE is Ownable, ReentrancyGuard {
     function getTotalSupply() public view returns(uint256) {
         // 检查代币地址是否已设置
         if(coinAddress == address(0)) {
-            return 21000000 ether; // 默认值，用于代币地址未设置的情况
+            return 0; // 默认值，用于代币地址未设置的情况
         }
 
         // 尝试获取代币合约的实际总供应量
@@ -239,8 +367,7 @@ contract PRESALE is Ownable, ReentrancyGuard {
             require(totalSupply > 0, "Invalid total supply");
             return totalSupply;
         } catch {
-            // 降级方案：返回默认值
-            return 21000000 ether;
+            return 0;
         }
     }
 
@@ -253,34 +380,83 @@ contract PRESALE is Ownable, ReentrancyGuard {
         stageUnlockRate = _rate;
     }
 
-    function getMarketPrice() public view returns(uint256){
-
-        uint256 _amount = IERC20(USDT).balanceOf(CCoin(coinAddress).pairUSDT());
-        uint256 _coin = IERC20(coinAddress).balanceOf(CCoin(coinAddress).pairUSDT());
-        
-        // 使用动态获取的总供应量
-        uint256 currentSupply = getTotalSupply();
-        uint256 price = (currentSupply * _amount) / _coin;
-        return price;                    
+   function getMarketPrice() public view returns(uint256 tokenPrice, uint256 marketCap){
+    if(lpAddress == address(0)) return (0, 0);
+    
+    uint256 _bnbAmount = address(lpAddress).balance;      // LP池中的BNB
+    uint256 _coin = IERC20(coinAddress).balanceOf(lpAddress); // LP池中的TOKEN
+    
+    if(_coin == 0) return (0, 0);
+    
+    // 计算单个TOKEN的BNB价格（以wei为单位）
+    tokenPrice = (_bnbAmount * 1e18) / _coin;
+    
+    // 计算总市值（以BNB为单位）
+    uint256 totalSupply = getTotalSupply();
+    marketCap = (tokenPrice * totalSupply) / 1e18;
+    
+    return (tokenPrice, marketCap);
     }
 
-    function supply() public view returns(uint256) {
-    return getTotalSupply();
-    }
     function getInsidePrice() public view returns(uint256){
         return (allTradeAmount / allTradeBNB); 
     }
 
     function advanceStage() external onlyOwner{
-        uint price = getMarketPrice();
-        if(price - lastMarketAmount >= marketDisAmount){
-            require(nowStage < 1000/stageUnlockRate, "max");
-            nowStage++;
-            lastMarketAmount = lastMarketAmount + marketDisAmount;
-        }
+    (, uint256 marketCap) = getMarketPrice(); // 获取当前市值
+    uint256 dynamicThreshold = getMarketDisAmountInBNB(); // 动态阈值
+
+    if(marketCap - lastMarketAmount >= dynamicThreshold){
+        require(nowStage < 1000/stageUnlockRate, "max");
+        nowStage++;
+        lastMarketAmount = lastMarketAmount + marketDisAmount;
+    }
+}
+// 修改函数
+    function getBNBPrice() public view returns(uint256) {
+    // 获取BNB-USDT交易对地址
+    address bnbUsdtPair = IPancakeFactory(PANCAKE_FACTORY).getPair(WBNB, USDT);
+
+    // 如果交易对不存在，返回默认价格
+    if(bnbUsdtPair == address(0)) {
+        return 600 * 1e18; // 默认600 USDT
     }
 
-    function unlock() external {     
+    // 获取交易对中的储备量
+    uint256 bnbReserve = IERC20(WBNB).balanceOf(bnbUsdtPair);
+    uint256 usdtReserve = IERC20(USDT).balanceOf(bnbUsdtPair);
+
+    // 如果BNB储备为0，返回默认价格
+    if(bnbReserve == 0) {
+        return 600 * 1e18; // 默认600 USDT
+    }
+
+    // 计算1 BNB = ? USDT
+    return (usdtReserve * 1e18) / bnbReserve;
+}
+    function getMarketCapInUSDT() public view returns(uint256) {
+    // 获取当前代币价格（BNB计价）
+    (, uint256 marketCapInBNB) = getMarketPrice();
+    
+    // 获取BNB的USDT价格
+    uint256 bnbPrice = getBNBPrice();
+    
+    if(bnbPrice == 0) return 0;
+    
+    // 转换为USDT计价的市值
+    return (marketCapInBNB * bnbPrice) / 1e18;
+}
+    function getMarketDisAmountInBNB() public view returns(uint256) {
+    uint256 targetUSDT = 1500000 * 1e18; // 150万USDT目标
+    uint256 bnbPrice = getBNBPrice();
+    
+    if(bnbPrice == 0) return 2500 * 1e18; // 默认2500 BNB
+    
+    // 将USDT目标转换为BNB市值
+    return (targetUSDT * 1e18) / bnbPrice;
+}
+
+    function unlock() external {
         require(presaleStatus >= 3, "In presale");
         require(coinAmount != 0,  "Not lp");
         preSaleStruct memory _p = preSaleAddress[msg.sender];
@@ -290,9 +466,8 @@ contract PRESALE is Ownable, ReentrancyGuard {
         uint256 _unlockAmount = (coinAmount * _dis * stageUnlockRate) / 1000;
 
         IPancakePair(lpAddress).approve(address(router), _unlockAmount);
-        (uint256 amount, uint256 amountUSDT) = router.removeLiquidity(
+        (uint256 amount, uint256 amountBNB) = router.removeLiquidityETH(
             coinAddress,
-            USDT,
             _unlockAmount,
             0,
             0,
@@ -300,10 +475,53 @@ contract PRESALE is Ownable, ReentrancyGuard {
             block.timestamp
         );
 
-       require(amount != 0 && amountUSDT != 0, "Error");
+        require(amount != 0 && amountBNB != 0, "Error");
 
-        TransferHelper.safeTransfer(coinAddress,address(0xdead),amount);
-        TransferHelper.safeTransfer(USDT,msg.sender,amountUSDT);
+        // 代币部分仍然销毁（这是合理的流动性移除机制）
+        TransferHelper.safeTransfer(coinAddress, address(0xdead), amount);
+
+        // BNB分配逻辑：集成LGE的backing机制
+        uint256 remainingBNB = amountBNB;
+
+        // 第一步：分配backing资金（如果启用）
+        if (backingShare > 0 && backingReceiver != address(0)) {
+            uint256 backingAmount = (amountBNB * backingShare) / 100;
+            if (backingAmount > 0) {
+                _transferETH(backingReceiver, backingAmount);
+                totalBackingAllocated += backingAmount;
+                remainingBNB -= backingAmount;
+
+                emit BackingFundsAllocated(backingAmount, backingReceiver, block.timestamp);
+            }
+        }
+
+        // 第二步：分配剩余BNB（LP分配逻辑）
+        if (lpDistributionEnabled && devLPShare > 0 && devLPReceiver != address(0)) {
+            // 按比例分配剩余BNB
+            uint256 userAmount = (remainingBNB * userLPShare) / LP_SHARE_BASE;
+            uint256 devAmount = (remainingBNB * devLPShare) / LP_SHARE_BASE;
+
+            // 确保分配总额不超过可用金额（防止舍入误差）
+            if (userAmount + devAmount > remainingBNB) {
+                devAmount = remainingBNB - userAmount;
+            }
+
+            // 分别转账
+            if (userAmount > 0) {
+                _transferETH(msg.sender, userAmount);
+            }
+            if (devAmount > 0) {
+                _transferETH(devLPReceiver, devAmount);
+            }
+
+            emit LPDistributed(msg.sender, userAmount, devAmount, devLPReceiver, block.timestamp);
+        } else {
+            // 如果未启用LP分配或配置无效，剩余BNB全部给用户（保持向后兼容）
+            if (remainingBNB > 0) {
+                _transferETH(msg.sender, remainingBNB);
+            }
+            emit LPDistributed(msg.sender, remainingBNB, 0, address(0), block.timestamp);
+        }
 
         _p.stage = nowStage;
         _p.hasUnlockAmount = _p.hasUnlockAmount + _unlockAmount;
@@ -359,11 +577,10 @@ contract PRESALE is Ownable, ReentrancyGuard {
         uint256 amount,
         address to
     ) private returns (uint256 amountOut) {
-        // 构建交换路径: ETH -> USDT -> Token
-        address[] memory path = new address[](3);
+        // 构建交换路径: ETH -> Token (直接交换)
+        address[] memory path = new address[](2);
         path[0] = router.WETH();
-        path[1] = USDT;
-        path[2] = token;
+        path[1] = token;
 
         // 记录交换前余额
         uint256 beforeBalance = IERC20(token).balanceOf(to);
@@ -442,12 +659,12 @@ contract PRESALE is Ownable, ReentrancyGuard {
             revert("Cant trade");
         }
         
-    // 直接用全部 BNB 进行一次交换
-    uint256 _cAmount = _swapETHToToken(coinAddress, msg.value, address(this));
-    require(_cAmount != 0, "Error, no swap");
+        // 直接用全部 BNB 进行一次交换
+        uint256 _cAmount = _swapETHToToken(coinAddress, msg.value, address(this));
+        require(_cAmount != 0, "Error, no swap");
 
-     // 统一使用内部交易模式，代币保留在合约中
-        allTradeAmount = allTradeAmount + _cAmount  ;
+        // 统一使用内部交易模式，代币保留在合约中
+        allTradeAmount = allTradeAmount + _cAmount;
         allTradeBNB = (allTradeBNB + msg.value);
         tradeCount[msg.sender]=_copies+_pNum;
     } 
@@ -462,7 +679,6 @@ contract PRESALE is Ownable, ReentrancyGuard {
         tradeCount[msg.sender] = 0;
 
         TransferHelper.safeTransfer(coinAddress,msg.sender,_amount);
-
     }
 
     function sellToken(uint256 _amount) external {
@@ -483,14 +699,14 @@ contract PRESALE is Ownable, ReentrancyGuard {
         IERC20(coinAddress).approve(address(router), _outAmount);
         address[] memory path = new address[](2);
         path[0] = coinAddress;
-        path[1] = USDT;
-    
-        uint256 beforeUSDTBalance = IERC20(USDT).balanceOf(address(this));
-        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(_outAmount,1, path, address(this), block.timestamp);
-        uint256 amountOut = _getBalanceChange(USDT, address(this), beforeUSDTBalance);
+        path[1] = router.WETH();
+
+        uint256 beforeBNBBalance = address(this).balance;
+        router.swapExactTokensForETHSupportingFeeOnTransferTokens(_outAmount,1, path, address(this), block.timestamp);
+        uint256 amountOut = address(this).balance - beforeBNBBalance;
 
         if(amountOut > 0) {
-            TransferHelper.safeTransfer(USDT,msg.sender,amountOut);
+            _transferETH(msg.sender, amountOut);
         }
 
     }
@@ -535,15 +751,14 @@ contract PRESALE is Ownable, ReentrancyGuard {
         return address(this).balance;
     }
 
-    // === BNB转换USDT功能 ===
 
     /**
-     * @dev 设置转换参数
+     * @dev 设置流动性参数
      * @param _slippage 滑点保护 (basis points, 300 = 3%)
-     * @param _minAmount 最小转换金额
-     * @param _enabled 是否启用转换功能
+     * @param _minAmount 最小流动性金额
+     * @param _enabled 是否启用流动性功能
      */
-    function setConversionConfig(
+    function setLiquidityConfig(
         uint256 _slippage,
         uint256 _minAmount,
         bool _enabled
@@ -551,32 +766,32 @@ contract PRESALE is Ownable, ReentrancyGuard {
         require(_slippage <= 1000, "Slippage too high"); // 最大10%
         require(_minAmount > 0, "Invalid min amount");
 
-        conversionSlippage = _slippage;
-        minConversionAmount = _minAmount;
-        conversionEnabled = _enabled;
+        liquiditySlippage = _slippage;
+        minLiquidityAmount = _minAmount;
+        liquidityEnabled = _enabled;
 
-        emit ConversionConfigUpdated(_slippage, _minAmount, _enabled);
+        emit LiquidityConfigUpdated(_slippage, _minAmount, _enabled);
     }
 
 
     /**
-     * @dev 查询转换状态和配置
+     * @dev 查询流动性状态和配置
      */
-    function getConversionStatus() external view returns (
+    function getLiquidityStatus() external view returns (
         uint256 accumulatedBNBAmount,
-        uint256 convertedUSDTAmount,
-        uint256 contractUSDTBalance,
+        uint256 processedBNBAmount,
+        uint256 contractBNBBalance,
         uint256 slippage,
         uint256 minAmount,
         bool enabled
     ) {
         return (
             accumulatedBNB,
-            convertedUSDT,
-            IERC20(USDT).balanceOf(address(this)),
-            conversionSlippage,
-            minConversionAmount,
-            conversionEnabled
+            processedBNB,
+            address(this).balance,
+            liquiditySlippage,
+            minLiquidityAmount,
+            liquidityEnabled
         );
     }
 
@@ -587,7 +802,7 @@ contract PRESALE is Ownable, ReentrancyGuard {
      */
     function emergencyWithdrawBNB(uint256 amount, address to) external onlyOwner {
         require(to != address(0), "Invalid recipient");
-        require(!conversionEnabled, "Disable conversion first");
+        require(!liquidityEnabled, "Disable liquidity first");
 
         uint256 withdrawAmount = amount == 0 ? address(this).balance : amount;
         require(withdrawAmount > 0, "No BNB to withdraw");
@@ -605,20 +820,21 @@ contract PRESALE is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev 紧急提取USDT（仅在紧急情况下使用）
+     * @dev 紧急提取代币（仅在紧急情况下使用）
      * @param amount 提取数量 (0表示全部)
      * @param to 接收地址
      */
-    function emergencyWithdrawUSDT(uint256 amount, address to) external onlyOwner {
+    function emergencyWithdrawToken(uint256 amount, address to) external onlyOwner {
         require(to != address(0), "Invalid recipient");
+        require(coinAddress != address(0), "Token not set");
 
-        uint256 contractBalance = IERC20(USDT).balanceOf(address(this));
+        uint256 contractBalance = IERC20(coinAddress).balanceOf(address(this));
         uint256 withdrawAmount = amount == 0 ? contractBalance : amount;
-        require(withdrawAmount > 0, "No USDT to withdraw");
-        require(contractBalance >= withdrawAmount, "Insufficient USDT balance");
+        require(withdrawAmount > 0, "No tokens to withdraw");
+        require(contractBalance >= withdrawAmount, "Insufficient token balance");
 
-        TransferHelper.safeTransfer(USDT, to, withdrawAmount);
-        emit EmergencyWithdraw("USDT", withdrawAmount, to);
+        TransferHelper.safeTransfer(coinAddress, to, withdrawAmount);
+        emit EmergencyWithdraw("TOKEN", withdrawAmount, to);
     }
 
     // === 预售完成整合流程 ===
@@ -643,25 +859,6 @@ contract PRESALE is Ownable, ReentrancyGuard {
         hasAuthorization = authorizedAmount > 0;
     }
 
-    /**
-     * @dev 自动计算流动性参数
-     * @param availableUSDT 可用的USDT数量
-     * @param availableTokens 可用的代币数量
-     * @return tokenAmount 用于流动性的代币数量
-     * @return usdtAmount 用于流动性的USDT数量
-     */
-    function calculateLiquidityParams(
-        uint256 availableUSDT,
-        uint256 availableTokens
-    ) public pure returns (uint256 tokenAmount, uint256 usdtAmount) {
-        require(availableUSDT > 0, "No USDT available");
-        require(availableTokens > 0, "No tokens available");
-
-        // 使用全部可用的USDT和代币
-        // 在实际应用中，可能需要根据预设的比例来计算
-        tokenAmount = availableTokens;
-        usdtAmount = availableUSDT;
-    }
 
     /**
      * @dev 从工厂合约获取授权的代币
@@ -688,27 +885,6 @@ contract PRESALE is Ownable, ReentrancyGuard {
 
 
     /**
-     * @dev 获取USDT/TOKEN池子的USDT流动性
-     * @return USDT流动性数量
-     */
-    function _getUSDTPoolLiquidity() internal view returns (uint256) {
-        if (coinAddress == address(0)) {
-            return 0;
-        }
-
-        try IPancakeFactory(router.factory()).getPair(USDT, coinAddress) returns (address pairAddress) {
-            if (pairAddress == address(0)) {
-                return 0; // 池子不存在
-            }
-
-            // 获取池子中的USDT余额
-            return IERC20(USDT).balanceOf(pairAddress);
-        } catch {
-            return 0; // 查询失败，返回0
-        }
-    }
-
-    /**
      * @dev 检查BNB/TOKEN池子是否存在
      * @return 池子是否存在
      */
@@ -730,29 +906,7 @@ contract PRESALE is Ownable, ReentrancyGuard {
 
     // 手动设置流动性类型函数已移除
 
-    /**
-     * @dev 查询当前流动性选择状态
-     * @return currentType 当前流动性类型
-     * @return autoEnabled 是否启用自动选择
-     * @return threshold 最小USDT阈值
-     * @return usdtLiquidity 当前USDT池子流动性
-     * @return bnbPoolExists BNB池子是否存在
-     */
-    function getLiquiditySelectionStatus() external view returns (
-        LiquidityType currentType,
-        bool autoEnabled,
-        uint256 threshold,
-        uint256 usdtLiquidity,
-        bool bnbPoolExists
-    ) {
-        return (
-            liquidityType,
-            autoLiquiditySelection,
-            minUSDTLiquidityThreshold,
-            _getUSDTPoolLiquidity(),
-            _checkBNBPoolExists()
-        );
-    }
+    // 智能选择系统已删除，简化为BNB模式
 
     /**
      * @dev 预售完成后的统一处理函数
@@ -769,16 +923,14 @@ contract PRESALE is Ownable, ReentrancyGuard {
 
         emit PresaleFinalizationStarted(accumulatedBNB, block.timestamp);
 
-        // 智能选择流动性类型
-        _selectOptimalLiquidityType();
-
+        // 直接使用BNB流动性模式
         try this._executeFinalizationSteps() {
             presaleFinalized = true;
             presaleStatus = 5; // 设置为完成状态
 
             emit PresaleFinalizationCompleted(
                 finalizedTokenAmount,
-                finalizedUSDTAmount,
+                liquidityBNBAmount,
                 totalLPTokens,
                 lpTokenReceiver,
                 block.timestamp
@@ -806,11 +958,11 @@ contract PRESALE is Ownable, ReentrancyGuard {
         pure
         returns (uint256 tokenForLP, uint256 bnbForLP)
     {
-        // 使用80%的BNB用于流动性，20%保留给团队
-        bnbForLP = bnbAmount * 80 / 100;
+        // 使用100%的BNB用于流动性，不保留给团队
+        bnbForLP = bnbAmount;
 
-        // 使用80%的代币用于流动性
-        tokenForLP = tokenAmount * 80 / 100;
+        // 使用100%的代币用于流动性
+        tokenForLP = tokenAmount;
 
         return (tokenForLP, bnbForLP);
     }
@@ -825,41 +977,19 @@ contract PRESALE is Ownable, ReentrancyGuard {
         uint256 tokensReceived = receiveTokensFromFactory();
         require(tokensReceived > 0, "Token reception failed");
 
-        // 步骤2: 根据流动性类型执行不同逻辑
-        if (liquidityType == LiquidityType.USDT) {
-            // USDT流动性模式：转换BNB为USDT
-            uint256 usdtReceived = this.convertBNBToUSDT(0); // 转换全部BNB
-            require(usdtReceived > 0, "BNB conversion failed");
+        // 简化为纯BNB流动性模式
+        uint256 bnbAmount = accumulatedBNB;
 
-            // 计算USDT流动性参数
-            (uint256 tokenAmount, uint256 usdtAmount) = calculateLiquidityParams(usdtReceived, tokensReceived);
-            emit LiquidityParametersCalculated(tokenAmount, usdtAmount);
+        // 计算BNB流动性参数
+        (uint256 tokenAmount, uint256 bnbAmountForLP) = calculateBNBLiquidityParams(bnbAmount, tokensReceived);
 
-            // 配置USDT流动性参数
-            liquidityTokenAmount = tokenAmount;
-            liquidityUSDTAmount = usdtAmount;
-            finalizedTokenAmount = tokenAmount;
-            finalizedUSDTAmount = usdtAmount;
+        // 配置BNB流动性参数
+        liquidityTokenAmount = tokenAmount;
+        liquidityBNBAmount = bnbAmountForLP;
+        finalizedTokenAmount = tokenAmount;
 
-            // 添加USDT流动性
-            _addLiquidityInternal();
-
-        } else {
-            // BNB流动性模式：直接使用BNB
-            uint256 bnbAmount = accumulatedBNB;
-
-            // 计算BNB流动性参数
-            (uint256 tokenAmount, uint256 bnbAmountForLP) = calculateBNBLiquidityParams(bnbAmount, tokensReceived);
-
-            // 配置BNB流动性参数
-            liquidityTokenAmount = tokenAmount;
-            liquidityBNBAmount = bnbAmountForLP;
-            finalizedTokenAmount = tokenAmount;
-            finalizedUSDTAmount = 0; // BNB模式下USDT为0
-
-            // 添加BNB流动性
-            _addBNBLiquidityInternal();
-        }
+        // 添加BNB流动性
+        _addBNBLiquidityInternal();
     }
 
     /**
@@ -910,62 +1040,6 @@ contract PRESALE is Ownable, ReentrancyGuard {
         }
     }
 
-    /**
-     * @dev 内部流动性添加函数（复用现有addLiquidity的核心逻辑）
-     */
-    function _addLiquidityInternal() internal {
-        require(!liquidityAdded, "Liquidity already added");
-        require(liquidityTokenAmount > 0, "Token amount not configured");
-        require(liquidityUSDTAmount > 0, "USDT amount not configured");
-
-        uint256 tokenAmount = liquidityTokenAmount;
-        uint256 usdtAmount = liquidityUSDTAmount;
-
-        // 计算滑点保护参数
-        uint256 tokenAmountMin = tokenAmount * (10000 - slippageProtection) / 10000;
-        uint256 usdtAmountMin = usdtAmount * (10000 - slippageProtection) / 10000;
-
-        // 授权路由器使用代币（精确授权）
-        _safeApprove(coinAddress, address(router), tokenAmount);
-        _safeApprove(USDT, address(router), usdtAmount);
-
-        // 添加流动性（带错误处理）
-        try router.addLiquidity(
-            coinAddress,                    // tokenA
-            USDT,                          // tokenB
-            tokenAmount,                   // amountADesired
-            usdtAmount,                    // amountBDesired
-            tokenAmountMin,                // amountAMin (滑点保护)
-            usdtAmountMin,                 // amountBMin (滑点保护)
-            lpTokenReceiver,               // to (LP代币接收者)
-            block.timestamp + 300          // deadline (5分钟)
-        ) returns (uint amountA, uint amountB, uint liquidity) {
-
-            // 成功处理
-            liquidityAdded = true;
-            totalLPTokens = liquidity;
-
-            // 撤销剩余授权
-            _safeApprove(coinAddress, address(router), 0);
-            _safeApprove(USDT, address(router), 0);
-
-            // 发射成功事件
-            emit LiquidityAdded(amountA, amountB, liquidity, lpTokenReceiver);
-
-            // 尝试自动放弃Token权限
-            _tryRenounceTokenOwnership();
-
-        } catch Error(string memory reason) {
-            // 处理已知错误
-            _handleLiquidityFailure(reason);
-            revert(string(abi.encodePacked("Liquidity failed: ", reason)));
-
-        } catch (bytes memory /*lowLevelData*/) {
-            // 处理低级错误
-            _handleLiquidityFailure("Low level error");
-            revert("Liquidity addition failed with low level error");
-        }
-    }
 
     /**
      * @dev 设置自动完成开关
@@ -983,7 +1057,7 @@ contract PRESALE is Ownable, ReentrancyGuard {
         bool isFinalized,
         bool autoEnabled,
         uint256 tokenAmount,
-        uint256 usdtAmount,
+        uint256 bnbAmount,
         bool liquidityAdded_,
         uint256 lpTokens
     ) {
@@ -991,10 +1065,191 @@ contract PRESALE is Ownable, ReentrancyGuard {
             presaleFinalized,
             autoFinalizationEnabled,
             finalizedTokenAmount,
-            finalizedUSDTAmount,
+            liquidityBNBAmount,
             liquidityAdded,
             totalLPTokens
         );
+    }
+
+    // === LP分配查询功能 ===
+
+    /**
+     * @dev 查询LP分配配置信息
+     * @return userShare 用户分配比例
+     * @return devShare 开发团队分配比例
+     * @return devReceiver 开发团队接收地址
+     * @return enabled 是否启用LP分配功能
+     * @return shareBase 分配比例基数
+     */
+    function getLPDistributionConfig() external view returns (
+        uint256 userShare,
+        uint256 devShare,
+        address devReceiver,
+        bool enabled,
+        uint256 shareBase
+    ) {
+        return (
+            userLPShare,
+            devLPShare,
+            devLPReceiver,
+            lpDistributionEnabled,
+            LP_SHARE_BASE
+        );
+    }
+
+    /**
+     * @dev 计算用户可领取的vested LP数量（基于LGE vesting机制）
+     * @param user 用户地址
+     * @return vestedAmount 可领取的vested数量
+     */
+    function calculateVestedAmount(address user) public view returns (uint256 vestedAmount) {
+        if (!vestingEnabled || lastVestingTime == 0) {
+            return 0;
+        }
+
+        preSaleStruct memory _p = preSaleAddress[user];
+        if (_p.verify != true || _p.preSaleCount == 0) {
+            return 0;
+        }
+
+        // 计算经过的vesting周期数
+        uint256 elapsedTime = block.timestamp - lastVestingTime;
+        uint256 vestingPeriods = elapsedTime / vestingDelay;
+
+        if (vestingPeriods == 0) {
+            return 0;
+        }
+
+        // 计算用户的总LP份额
+        uint256 userTotalLP = _p.preSaleCount; // 用户的预售数量对应的LP
+
+        // 计算每个周期可释放的数量
+        uint256 releasePerPeriod = (userTotalLP * vestingRate) / 100;
+
+        // 计算总可释放数量
+        uint256 totalVestable = releasePerPeriod * vestingPeriods;
+
+        // 减去已领取的数量
+        uint256 alreadyClaimed = userVestedClaimed[user];
+
+        if (totalVestable > alreadyClaimed) {
+            vestedAmount = totalVestable - alreadyClaimed;
+
+            // 确保不超过用户的总LP份额
+            if (alreadyClaimed + vestedAmount > userTotalLP) {
+                vestedAmount = userTotalLP - alreadyClaimed;
+            }
+        }
+
+        return vestedAmount;
+    }
+
+    /**
+     * @dev 用户领取vested LP（基于LGE vesting机制）
+     */
+    function claimVestedLP() external {
+        require(vestingEnabled, "Vesting not enabled");
+        require(presaleStatus >= 3, "Presale not completed");
+
+        uint256 vestedAmount = calculateVestedAmount(msg.sender);
+        require(vestedAmount > 0, "No vested LP available");
+
+        // 更新用户已领取数量
+        userVestedClaimed[msg.sender] += vestedAmount;
+        totalVestedAmount += vestedAmount;
+
+        // 转移LP代币给用户
+        // 注意：这里需要根据实际的LP代币合约来实现转移
+        // 暂时使用ETH转移作为示例
+        uint256 ethEquivalent = (vestedAmount * address(this).balance) / coinAmount;
+        if (ethEquivalent > 0) {
+            _transferETH(msg.sender, ethEquivalent);
+        }
+
+        emit VestedLPClaimed(msg.sender, vestedAmount, block.timestamp);
+    }
+
+    /**
+     * @dev 预览LP分配结果
+     * @param bnbAmount BNB总量
+     * @return userAmount 用户将获得的BNB数量
+     * @return devAmount 开发团队将获得的BNB数量
+     */
+    function previewLPDistribution(uint256 bnbAmount) external view returns (
+        uint256 userAmount,
+        uint256 devAmount
+    ) {
+        if (lpDistributionEnabled && devLPShare > 0 && devLPReceiver != address(0)) {
+            userAmount = (bnbAmount * userLPShare) / LP_SHARE_BASE;
+            devAmount = (bnbAmount * devLPShare) / LP_SHARE_BASE;
+
+            // 确保分配总额不超过可用金额
+            if (userAmount + devAmount > bnbAmount) {
+                devAmount = bnbAmount - userAmount;
+            }
+        } else {
+            userAmount = bnbAmount;
+            devAmount = 0;
+        }
+    }
+
+    /**
+     * @dev 查询LGE配置信息
+     * @return vestingDelay_ 释放延迟
+     * @return vestingRate_ 释放比例
+     * @return vestingEnabled_ 是否启用vesting
+     * @return backingShare_ 资产支撑份额
+     * @return backingReceiver_ 资产支撑接收地址
+     * @return startTime_ 预售开始时间
+     * @return hardcap_ 硬顶限制
+     * @return maxBuyPerWallet_ 每个钱包最大购买量
+     */
+    function getLGEConfig() external view returns (
+        uint256 vestingDelay_,
+        uint256 vestingRate_,
+        bool vestingEnabled_,
+        uint256 backingShare_,
+        address backingReceiver_,
+        uint256 startTime_,
+        uint256 hardcap_,
+        uint256 maxBuyPerWallet_
+    ) {
+        return (
+            vestingDelay,
+            vestingRate,
+            vestingEnabled,
+            backingShare,
+            backingReceiver,
+            startTime,
+            hardcap,
+            maxBuyPerWallet
+        );
+    }
+
+    /**
+     * @dev 查询用户的vesting状态
+     * @param user 用户地址
+     * @return totalLP 用户总LP份额
+     * @return vestedAvailable 可领取的vested数量
+     * @return alreadyClaimed 已领取数量
+     * @return nextVestingTime 下次vesting时间
+     */
+    function getUserVestingStatus(address user) external view returns (
+        uint256 totalLP,
+        uint256 vestedAvailable,
+        uint256 alreadyClaimed,
+        uint256 nextVestingTime
+    ) {
+        preSaleStruct memory _p = preSaleAddress[user];
+        totalLP = _p.preSaleCount;
+        vestedAvailable = calculateVestedAmount(user);
+        alreadyClaimed = userVestedClaimed[user];
+
+        if (vestingEnabled && lastVestingTime > 0) {
+            nextVestingTime = lastVestingTime + vestingDelay;
+        }
+
+        return (totalLP, vestedAvailable, alreadyClaimed, nextVestingTime);
     }
 
     // === 流动性管理功能 ===
@@ -1011,29 +1266,29 @@ contract PRESALE is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev 配置流动性参数
+     * @dev 配置BNB流动性参数
      * @param _tokenAmount 代币数量
-     * @param _usdtAmount USDT数量
+     * @param _bnbAmount BNB数量
      * @param _slippage 滑点保护 (basis points, 500 = 5%)
      * @param _lpReceiver LP代币接收地址
      */
     function configureLiquidity(
         uint256 _tokenAmount,
-        uint256 _usdtAmount,
+        uint256 _bnbAmount,
         uint256 _slippage,
         address _lpReceiver
     ) external onlyOwner {
         require(_tokenAmount > 0, "Invalid token amount");
-        require(_usdtAmount > 0, "Invalid USDT amount");
+        require(_bnbAmount > 0, "Invalid BNB amount");
         require(_slippage <= 1000, "Slippage too high"); // 最大10%
         require(_lpReceiver != address(0), "Invalid LP receiver");
 
         liquidityTokenAmount = _tokenAmount;
-        liquidityUSDTAmount = _usdtAmount;
+        liquidityBNBAmount = _bnbAmount;
         slippageProtection = _slippage;
         lpTokenReceiver = _lpReceiver;
 
-        emit LiquidityConfigured(_tokenAmount, _usdtAmount, _slippage, _lpReceiver);
+        emit LiquidityConfigured(_tokenAmount, _bnbAmount, _slippage, _lpReceiver);
     }
 
     /**
@@ -1051,24 +1306,7 @@ contract PRESALE is Ownable, ReentrancyGuard {
         }
     }
 
-    /**
-     * @dev 确保合约有足够的代币余额
-     * @param tokenAmount 需要的代币数量
-     * @param usdtAmount 需要的USDT数量
-     */
-  function _ensureTokenBalance(uint256 tokenAmount, uint256 usdtAmount) internal {
-        // 检查并获取项目代币
-        uint256 currentTokenBalance = IERC20(coinAddress).balanceOf(address(this));
-        if (currentTokenBalance < tokenAmount) {
-            uint256 needed = tokenAmount - currentTokenBalance;
-            // 从工厂合约获取代币
-            TransferHelper.safeTransferFrom(coinAddress, factoryAddress, address(this), needed);
-        }
 
-        // 检查USDT余额
-        uint256 currentUSDTBalance = IERC20(USDT).balanceOf(address(this));
-        require(currentUSDTBalance >= usdtAmount, "Insufficient USDT balance");
-    }
 
     /**
      * @dev 处理流动性添加失败的情况
@@ -1077,71 +1315,9 @@ contract PRESALE is Ownable, ReentrancyGuard {
     function _handleLiquidityFailure(string memory reason) internal {
         // 撤销所有授权
         _safeApprove(coinAddress, address(router), 0);
-        _safeApprove(USDT, address(router), 0);
 
         // 发射失败事件
-        emit LiquidityFailed(reason, liquidityTokenAmount, liquidityUSDTAmount);
-    }
-
-    /**
-     * @dev 核心流动性添加函数
-     * 使用PancakeSwap路由器添加代币/USDT流动性
-     */
-    function addLiquidity() external onlyOwner nonReentrant {
-        require(!liquidityAdded, "Liquidity already added");
-        require(coinAddress != address(0), "Token not set");
-        require(factoryAddress != address(0), "Factory address not set");
-        require(liquidityTokenAmount > 0, "Token amount not configured");
-        require(liquidityUSDTAmount > 0, "USDT amount not configured");
-        require(lpTokenReceiver != address(0), "LP receiver not set");
-
-        uint256 tokenAmount = liquidityTokenAmount;
-        uint256 usdtAmount = liquidityUSDTAmount;
-
-        // 1. 确保合约有足够的代币余额
-        _ensureTokenBalance(tokenAmount, usdtAmount);
-
-        // 2. 计算滑点保护参数
-        uint256 tokenAmountMin = tokenAmount * (10000 - slippageProtection) / 10000;
-        uint256 usdtAmountMin = usdtAmount * (10000 - slippageProtection) / 10000;
-
-        // 3. 授权路由器使用代币（精确授权）
-        _safeApprove(coinAddress, address(router), tokenAmount);
-        _safeApprove(USDT, address(router), usdtAmount);
-
-        // 4. 添加流动性（带错误处理）
-        try router.addLiquidity(
-            coinAddress,                    // tokenA
-            USDT,                          // tokenB
-            tokenAmount,                   // amountADesired
-            usdtAmount,                    // amountBDesired
-            tokenAmountMin,                // amountAMin (滑点保护)
-            usdtAmountMin,                 // amountBMin (滑点保护)
-            lpTokenReceiver,               // to (LP代币接收者)
-            block.timestamp + 300          // deadline (5分钟)
-        ) returns (uint amountA, uint amountB, uint liquidity) {
-
-            // 5. 成功处理
-            liquidityAdded = true;
-            totalLPTokens = liquidity;
-
-            // 6. 撤销剩余授权
-            _safeApprove(coinAddress, address(router), 0);
-            _safeApprove(USDT, address(router), 0);
-
-            // 7. 发射成功事件
-            emit LiquidityAdded(amountA, amountB, liquidity, lpTokenReceiver);
-
-        } catch Error(string memory reason) {
-            // 处理已知错误
-            _handleLiquidityFailure(reason);
-            revert(string(abi.encodePacked("Liquidity failed: ", reason)));
-
-        } catch (bytes memory /* lowLevelData */) {
-            // 处理低级错误
-            _handleLiquidityFailure("Low level error");
-            revert("Liquidity addition failed with low level error");
-        }
+        emit LiquidityFailed(reason, liquidityTokenAmount, liquidityBNBAmount);
     }
 
 
@@ -1159,19 +1335,19 @@ contract PRESALE is Ownable, ReentrancyGuard {
     /**
      * @dev 查询合约当前的代币余额
      * @return tokenBalance 项目代币余额
-     * @return usdtBalance USDT余额
+     * @return bnbBalance BNB余额
      */
-    function getContractBalances() external view returns (uint256 tokenBalance, uint256 usdtBalance) {
+    function getContractBalances() external view returns (uint256 tokenBalance, uint256 bnbBalance) {
         tokenBalance = coinAddress != address(0) ? IERC20(coinAddress).balanceOf(address(this)) : 0;
-        usdtBalance = IERC20(USDT).balanceOf(address(this));
+        bnbBalance = address(this).balance;
     }
 
     /**
-     * @dev 查询流动性配置信息
+     * @dev 查询BNB流动性配置信息
      */
     function getLiquidityConfig() external view returns (
         uint256 tokenAmount,
-        uint256 usdtAmount,
+        uint256 bnbAmount,
         uint256 slippage,
         address lpReceiver,
         bool added,
@@ -1179,7 +1355,7 @@ contract PRESALE is Ownable, ReentrancyGuard {
     ) {
         return (
             liquidityTokenAmount,
-            liquidityUSDTAmount,
+            liquidityBNBAmount,
             slippageProtection,
             lpTokenReceiver,
             liquidityAdded,
