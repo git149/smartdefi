@@ -99,7 +99,7 @@ export default {
 <style scoped>
 .home-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%);
+  background: linear-gradient(135deg, #1a0037 0%, #30639c 50%, #081e35 100%);
   color: white;
 }
 

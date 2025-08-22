@@ -111,14 +111,14 @@ export default {
 </script>
 
 <style scoped>
-/* 主容器样式 - 精确匹配参考图的375px × 812px移动端布局 */
+/* 主容器样式 - 调整为响应式高度以支持滚动 */
 .homepage-container {
   width: 375px;
-  height: 812px;
+  min-height: 812px; /* 改为最小高度，允许内容超出时扩展 */
   margin: 0 auto;
-  background: linear-gradient(135deg, #1a0037 0%, #2d00aa 50%, #4a00e0 100%);
+  background: linear-gradient(135deg, #1a0037 0%, #30639c 50%, #081e35 100%);
   border-radius: 0;
-  overflow: hidden;
+  overflow: visible; /* 改为visible，允许内容正常滚动 */
   position: relative;
   display: flex;
   flex-direction: column;
@@ -158,7 +158,7 @@ export default {
 .section-list {
   /* TokenList组件区域 - 对应原型的列表区域 */
   margin-bottom: 0;
-  flex: 1;
+  /* 移除flex: 1，让内容自然扩展，避免滚动问题 */
 }
 
 /* 深度样式调整 - 精确匹配参考图样式 */
